@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Isometric Engine Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: #fff;
+    }
+
+    .header {
+      padding: 20px;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      color: #888;
+      font-size: 14px;
+    }
+
+    .demo-container {
+      display: flex;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .scene-wrapper {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .scene-header {
+      padding: 12px 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    #scene {
+      width: 100%;
+      height: 500px;
+      position: relative;
+    }
+
+    .controls {
+      width: 300px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .control-group {
+      margin-bottom: 20px;
+    }
+
+    .control-group h3 {
+      font-size: 14px;
+      margin-bottom: 12px;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 10px 16px;
+      margin-bottom: 8px;
+      background: rgba(100, 149, 237, 0.3);
+      border: 1px solid rgba(100, 149, 237, 0.5);
+      color: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: rgba(100, 149, 237, 0.5);
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-effect {
+      background: rgba(0, 255, 255, 0.2);
+      border-color: rgba(0, 255, 255, 0.4);
+    }
+
+    .btn-effect:hover {
+      background: rgba(0, 255, 255, 0.3);
+    }
+
+    .info {
+      font-size: 12px;
+      color: #666;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 6px;
+      margin-top: 12px;
+    }
+
+    .info p {
+      margin-bottom: 4px;
+    }
+
+    .info strong {
+      color: #888;
+    }
+
+    .slider-control {
+      margin-bottom: 8px;
+    }
+
+    .slider-control label {
+      display: block;
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 6px;
+    }
+
+    .slider-control input[type="range"] {
+      -webkit-appearance: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      height: 6px;
+      cursor: pointer;
+    }
+
+    .slider-control input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #6495ED;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Isometric Engine Demo</h1>
+    <p>A lightweight 2.5D isometric view engine based on CSS 3D Transform</p>
+  </div>
+
+  <div class="demo-container">
+    <div class="scene-wrapper">
+      <div class="scene-header">Interactive Scene</div>
+      <div id="scene"></div>
+    </div>
+
+    <div class="controls">
+      <div class="control-group">
+        <h3>Entities</h3>
+        <button class="btn" id="addEntity">Add Entity</button>
+        <button class="btn" id="stackEntity">Stack Entity</button>
+        <button class="btn" id="addConnector">Add Connector</button>
+      </div>
+
+      <div class="control-group">
+        <h3>Effects</h3>
+        <button class="btn btn-effect" id="effectBounce">Bounce Effect</button>
+        <button class="btn btn-effect" id="effectBlink">Blink Effect</button>
+        <button class="btn btn-effect" id="effectGlow">Glow Effect</button>
+        <button class="btn btn-effect" id="effectPulse">Pulse Effect</button>
+        <button class="btn" id="clearEffects">Clear Effects</button>
+      </div>
+
+      <div class="control-group">
+        <h3>Scene</h3>
+        <div class="slider-control">
+          <label>Light Intensity: <span id="lightVal">50</span>%</label>
+          <input type="range" id="lightSlider" min="0" max="100" value="50" style="width: 100%;">
+        </div>
+        <button class="btn" id="resetScene" style="margin-top: 12px;">Reset Scene</button>
+      </div>
+
+      <div class="info" id="info">
+        <p><strong>Click</strong> on entities to select</p>
+        <p><strong>Hover</strong> to see tooltips</p>
+        <p>Selected: <span id="selected">None</span></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { IsometricEngine } from './src/index.ts'
+
+    // Initialize engine
+    const engine = new IsometricEngine()
+    const container = document.getElementById('scene')
+    const scene = engine.createScene(container, {
+      angle: 45,
+      perspective: 1000,
+      scale: 1,
+    })
+
+    // Center the origin
+    scene.centerOrigin()
+
+    // Track entities and selection
+    let entities = []
+    let selectedEntity = null
+    let entityCount = 0
+
+    // Store connectors for demo
+    let connectors = []
+
+    // Create initial entities
+    function createInitialScene() {
+      // Base platform
+      const platform = engine.createEntity({
+        position: { x: 0, y: 0, z: 0 },
+        size: { width: 200, height: 200, depth: 20 },
+      })
+      scene.add(platform)
+      entities.push(platform)
+
+      // Set custom innerHTML on platform top face
+      platform.setFaceInnerHTML('top', `
+        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.5);">
+          🏗️ Platform
+        </div>
+      `)
+
+      // Add tooltip to platform
+      const platformTooltip = engine.createTooltip(platform, {
+        content: 'Base Platform',
+        position: 'top',
+        trigger: 'hover',
+      })
+      engine.addTooltipToScene(platformTooltip, scene)
+
+      // Building 1 - Server
+      const building1 = engine.createEntity({
+        position: { x: -50, y: -50, z: 20 },
+        size: { width: 60, height: 60, depth: 80 },
+      })
+      scene.add(building1)
+      entities.push(building1)
+
+      // Set custom content on all 3 faces of building1
+      building1.setFaceInnerHTML('top', `
+        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px;">
+          🖥️
+        </div>
+      `)
+      building1.setFaceInnerHTML('left', `
+        <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-size:10px;padding:4px;">
+          <div style="font-weight:bold;">Server A</div>
+          <div style="color:#0f0;margin-top:4px;">● Online</div>
+        </div>
+      `)
+      building1.setFaceInnerHTML('right', `
+        <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-size:9px;padding:4px;">
+          <div>CPU: 45%</div>
+          <div style="background:#333;width:80%;height:6px;margin:4px 0;border-radius:3px;">
+            <div style="background:#4CAF50;width:45%;height:100%;border-radius:3px;"></div>
+          </div>
+          <div>RAM: 72%</div>
+          <div style="background:#333;width:80%;height:6px;margin:4px 0;border-radius:3px;">
+            <div style="background:#FF9800;width:72%;height:100%;border-radius:3px;"></div>
+          </div>
+        </div>
+      `)
+
+      // Building 2 - Database
+      const building2 = engine.createEntity({
+        position: { x: 50, y: -50, z: 20 },
+        size: { width: 50, height: 50, depth: 60 },
+      })
+      scene.add(building2)
+      entities.push(building2)
+
+      building2.setFaceInnerHTML('top', `
+        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:18px;">
+          🗄️
+        </div>
+      `)
+      building2.setFaceInnerHTML('left', `
+        <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-size:10px;">
+          <div style="font-weight:bold;">Database</div>
+          <div style="color:#0ff;margin-top:4px;">● Active</div>
+        </div>
+      `)
+      building2.setFaceInnerHTML('right', `
+        <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-size:9px;padding:4px;">
+          <div>Storage</div>
+          <div style="background:#333;width:80%;height:6px;margin:4px 0;border-radius:3px;">
+            <div style="background:#2196F3;width:58%;height:100%;border-radius:3px;"></div>
+          </div>
+          <div>58% used</div>
+        </div>
+      `)
+
+      // Building 3 - API Gateway
+      const building3 = engine.createEntity({
+        position: { x: 0, y: 50, z: 20 },
+        size: { width: 70, height: 70, depth: 100 },
+      })
+      scene.add(building3)
+      entities.push(building3)
+
+      building3.setFaceInnerHTML('top', `
+        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:22px;">
+          🌐
+        </div>
+      `)
+      building3.setFaceInnerHTML('left', `
+        <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-size:11px;padding:6px;">
+          <div style="font-weight:bold;">API Gateway</div>
+          <div style="color:#0f0;margin-top:6px;">● Running</div>
+          <div style="margin-top:8px;font-size:9px;color:#aaa;">v2.1.0</div>
+        </div>
+      `)
+      building3.setFaceInnerHTML('right', `
+        <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-size:9px;padding:6px;">
+          <div>Requests/s</div>
+          <div style="font-size:16px;font-weight:bold;color:#4CAF50;margin:4px 0;">1,247</div>
+          <div>Latency</div>
+          <div style="font-size:12px;color:#2196F3;">23ms</div>
+        </div>
+      `)
+
+      // Add connectors between buildings to show data flow
+      const connector1 = engine.createConnector(building1, building2, {
+        color: '#00ffff',
+        width: 2,
+        style: 'dashed',
+      })
+      engine.addConnectorToScene(connector1, scene)
+      connectors.push(connector1)
+
+      const connector2 = engine.createConnector(building2, building3, {
+        color: '#ff00ff',
+        width: 2,
+        style: 'solid',
+        arrow: true,
+      })
+      engine.addConnectorToScene(connector2, scene)
+      connectors.push(connector2)
+
+      const connector3 = engine.createConnector(building1, building3, {
+        color: '#ffff00',
+        width: 2,
+        curvature: 0.3,
+        style: 'dotted',
+      })
+      engine.addConnectorToScene(connector3, scene)
+      connectors.push(connector3)
+
+      // Add tooltips
+      const tooltip1 = engine.createTooltip(building1, {
+        content: 'Server A<br><small>Click to select</small>',
+        position: 'top',
+      })
+      engine.addTooltipToScene(tooltip1, scene)
+
+      const tooltip2 = engine.createTooltip(building2, {
+        content: 'Database<br><small>Click to select</small>',
+        position: 'top',
+      })
+      engine.addTooltipToScene(tooltip2, scene)
+
+      const tooltip3 = engine.createTooltip(building3, {
+        content: 'API Gateway<br><small>Click to select</small>',
+        position: 'top',
+      })
+      engine.addTooltipToScene(tooltip3, scene)
+
+      // Bind click events
+      entities.forEach((entity, index) => {
+        entity.on('click', () => {
+          selectEntity(entity, index)
+        })
+      })
+
+      entityCount = entities.length
+    }
+
+    // Select entity
+    function selectEntity(entity, index) {
+      // Clear previous selection
+      if (selectedEntity) {
+        selectedEntity.getElement().style.outline = ''
+      }
+
+      selectedEntity = entity
+      entity.getElement().style.outline = '2px solid #00ffff'
+      document.getElementById('selected').textContent = `Entity ${index + 1}`
+    }
+
+    // Add new entity
+    document.getElementById('addEntity').addEventListener('click', () => {
+      const x = (Math.random() - 0.5) * 150
+      const y = (Math.random() - 0.5) * 150
+      const size = 30 + Math.random() * 40
+
+      const entity = engine.createEntity({
+        position: { x, y, z: 20 },
+        size: { width: size, height: size, depth: size + 20 },
+      })
+
+      scene.add(entity)
+      entities.push(entity)
+      entityCount++
+
+      entity.on('click', () => {
+        selectEntity(entity, entities.indexOf(entity))
+      })
+
+      // Add tooltip
+      const tooltip = engine.createTooltip(entity, {
+        content: `Entity ${entityCount}`,
+        position: 'top',
+      })
+      engine.addTooltipToScene(tooltip, scene)
+    })
+
+    // Stack entity
+    document.getElementById('stackEntity').addEventListener('click', () => {
+      if (!selectedEntity) {
+        alert('Please select an entity first')
+        return
+      }
+
+      const stackedEntity = engine.createEntity({
+        size: { width: 30, height: 30, depth: 30 },
+      })
+
+      stackedEntity.stackOn(selectedEntity, { x: 0, y: 0, z: 0 })
+      scene.add(stackedEntity)
+      entities.push(stackedEntity)
+      entityCount++
+
+      stackedEntity.on('click', () => {
+        selectEntity(stackedEntity, entities.indexOf(stackedEntity))
+      })
+    })
+
+    // Add connector
+    document.getElementById('addConnector').addEventListener('click', () => {
+      if (entities.length < 2) {
+        alert('Need at least 2 entities')
+        return
+      }
+
+      const from = entities[Math.floor(Math.random() * entities.length)]
+      let to = entities[Math.floor(Math.random() * entities.length)]
+      while (to === from) {
+        to = entities[Math.floor(Math.random() * entities.length)]
+      }
+
+      const connector = engine.createConnector(from, to, {
+        color: `hsl(${Math.random() * 360}, 70%, 60%)`,
+        width: 2,
+        curvature: Math.random() * 0.5,
+      })
+      engine.addConnectorToScene(connector, scene)
+    })
+
+    // Effect buttons
+    document.getElementById('effectBounce').addEventListener('click', () => {
+      if (selectedEntity) {
+        selectedEntity.applyEffect({ type: 'bounce', loop: true })
+      }
+    })
+
+    document.getElementById('effectBlink').addEventListener('click', () => {
+      if (selectedEntity) {
+        selectedEntity.applyEffect({ type: 'blink', loop: true })
+      }
+    })
+
+    document.getElementById('effectGlow').addEventListener('click', () => {
+      if (selectedEntity) {
+        selectedEntity.applyEffect({ type: 'glow', loop: true, color: '#00ffff' })
+      }
+    })
+
+    document.getElementById('effectPulse').addEventListener('click', () => {
+      if (selectedEntity) {
+        selectedEntity.applyEffect({ type: 'pulse', loop: true })
+      }
+    })
+
+    document.getElementById('clearEffects').addEventListener('click', () => {
+      if (selectedEntity) {
+        selectedEntity.clearEffects()
+      }
+    })
+
+    // Reset scene
+    document.getElementById('resetScene').addEventListener('click', () => {
+      scene.clear()
+      entities = []
+      connectors = []
+      selectedEntity = null
+      document.getElementById('selected').textContent = 'None'
+      createInitialScene()
+      // 重新应用当前光照强度
+      const currentIntensity = parseInt(document.getElementById('lightSlider').value)
+      applyLightIntensity(currentIntensity)
+    })
+
+    // Light intensity control
+    function applyLightIntensity(intensity) {
+      entities.forEach(entity => {
+        entity.setLightIntensity(intensity)
+      })
+    }
+
+    document.getElementById('lightSlider').addEventListener('input', (e) => {
+      const val = e.target.value
+      document.getElementById('lightVal').textContent = val
+      applyLightIntensity(parseInt(val))
+    })
+
+    // Initialize
+    createInitialScene()
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      scene.centerOrigin()
+      scene.updateAllZIndices()
+    })
+  </script>
+</body>
+</html>
