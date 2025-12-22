@@ -1,5 +1,6 @@
 import type { Size3D } from '../types'
-import { DEFAULT_COLORS, DEFAULT_ISO_ANGLE } from '../constants/defaults'
+import { DEFAULT_COLORS } from '../constants/defaults'
+import { ROTATE_X_DEG, ROTATE_Z_DEG } from '../utils/isometric'
 import { adjustBrightness, brighten, darken, rgbToHex, parseHexColor } from '../utils/color'
 
 /**
@@ -57,7 +58,7 @@ export class CubeRenderer {
       width: `${w}px`,
       height: `${d}px`,
       transformStyle: 'preserve-3d',
-      transform: `translate3d(-50%, -50%, 0) rotateX(${DEFAULT_ISO_ANGLE}deg) rotateZ(45deg)`,
+      transform: `translate3d(-50%, -50%, 0) rotateX(${ROTATE_X_DEG}deg) rotateZ(${ROTATE_Z_DEG}deg)`,
       pointerEvents: 'none'
     })
 

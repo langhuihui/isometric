@@ -1,5 +1,4 @@
-import { COS_ANGLE, SIN_ANGLE } from '../utils/isometric'
-import { DEFAULT_ISO_ANGLE } from '../constants/defaults'
+import { COS_ANGLE, SIN_ANGLE, COS_Z, SIN_Z, COS_X, SIN_X } from '../utils/isometric'
 
 /** 路由方向类型 */
 export type RouteAxis = 'x' | 'y' | 'z'
@@ -35,14 +34,6 @@ export interface PathWithZIndex {
   path: string
   zIndex: number
 }
-
-// CSS 3D 变换矩阵系数（对应 rotateX(60deg) rotateZ(45deg)）
-const ROTATE_X_RAD = DEFAULT_ISO_ANGLE * Math.PI / 180
-const ROTATE_Z_RAD = 45 * Math.PI / 180
-const COS_Z = Math.cos(ROTATE_Z_RAD)
-const SIN_Z = Math.sin(ROTATE_Z_RAD)
-const COS_X = Math.cos(ROTATE_X_RAD)
-const SIN_X = Math.sin(ROTATE_X_RAD)
 
 /**
  * 路径计算器
@@ -97,7 +88,7 @@ export class PathCalculator {
    */
   calculateScreenPath(
     fromScreen: ScreenPoint3D,
-    toScreen: ScreenPoint3D,
+    _toScreen: ScreenPoint3D,
     fromIso: IsoPoint,
     toIso: IsoPoint,
     route: string,

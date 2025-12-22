@@ -1,5 +1,5 @@
 {
-  "name": "isometric-engine",
+  "name": "isometric",
   "version": "0.1.0",
   "description": "A lightweight 2.5D isometric view engine based on CSS 3D Transform",
   "type": "module",

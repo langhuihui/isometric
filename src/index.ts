@@ -14,7 +14,10 @@ export { CubeRenderer } from './components/CubeRenderer'
 export { PathCalculator } from './components/PathCalculator'
 
 // Web Components (声明式组件)
-export { IsoEntity } from './components/IsoEntity'
+export { IsoEntity, type FaceType, type PositionType } from './components/IsoEntity'
+export { IsoCube } from './components/IsoCube'
+export { IsoPlane } from './components/IsoPlane'
+export { IsoConsole } from './components/IsoConsole'
 export { IsoConnector } from './components/IsoConnector'
 export { IsoScene } from './components/IsoScene'
 

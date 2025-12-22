@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IsoConnector 连线渲染测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .header {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .header .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-right: 8px;
+        }
+
+        iso-scene {
+            display: block;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* 实体样式 - 半透明 */
+        .box-top {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.5) 0%, rgba(118, 75, 162, 0.5) 100%);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .box-front {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(90, 103, 216, 0.5) 0%, rgba(76, 81, 191, 0.5) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 10px;
+        }
+
+        .box-right {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(76, 81, 191, 0.5) 0%, rgba(67, 65, 144, 0.5) 100%);
+        }
+
+        .server-top {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.5) 0%, rgba(5, 150, 105, 0.5) 100%);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .server-front {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(5, 150, 105, 0.5) 0%, rgba(4, 120, 87, 0.5) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 10px;
+        }
+
+        .server-right {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(4, 120, 87, 0.5) 0%, rgba(6, 95, 70, 0.5) 100%);
+        }
+
+        .client-top {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.5) 0%, rgba(217, 119, 6, 0.5) 100%);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .client-front {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(217, 119, 6, 0.5) 0%, rgba(180, 83, 9, 0.5) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 10px;
+        }
+
+        .client-right {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(180, 83, 9, 0.5) 0%, rgba(146, 64, 14, 0.5) 100%);
+        }
+
+        .storage-top {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(236, 72, 153, 0.5) 0%, rgba(219, 39, 119, 0.5) 100%);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .storage-front {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(219, 39, 119, 0.5) 0%, rgba(190, 24, 93, 0.5) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 10px;
+        }
+
+        .storage-right {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(190, 24, 93, 0.5) 0%, rgba(157, 23, 77, 0.5) 100%);
+        }
+
+        /* 左侧连线列表面板 */
+        .list-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(30, 30, 50, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            color: #fff;
+            z-index: 10000;
+            width: 220px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .list-panel .panel-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #667eea;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 8px;
+        }
+
+        /* 右侧控制面板 */
+        .config-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(30, 30, 50, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            color: #fff;
+            z-index: 10000;
+            min-width: 280px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .config-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #667eea;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 8px;
+        }
+
+        .config-section {
+            margin-bottom: 16px;
+        }
+
+        .config-section-title {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .config-row {
+            margin-bottom: 10px;
+        }
+
+        .config-row label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: #ccc;
+        }
+
+        .config-row input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #333;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .config-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        .config-row select {
+            width: 100%;
+            padding: 6px 8px;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 12px;
+        }
+
+        .config-row input[type="color"] {
+            width: 100%;
+            height: 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .config-row input[type="number"] {
+            width: 100%;
+            padding: 6px 8px;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 12px;
+        }
+
+        .config-panel button {
+            width: 100%;
+            padding: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .config-panel button:hover {
+            opacity: 0.9;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .checkbox-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .checkbox-row label {
+            font-size: 12px;
+            color: #ccc;
+            cursor: pointer;
+        }
+
+        /* 九宫格位置选择器 */
+        .position-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .position-row label {
+            font-size: 12px;
+            color: #ccc;
+            min-width: 45px;
+        }
+
+        .position-row select {
+            flex: 1;
+            padding: 6px 8px;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 12px;
+        }
+
+        .position-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0;
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
+        }
+
+        .position-grid button {
+            width: 12px;
+            height: 12px;
+            border: 1px solid #555;
+            background: #333;
+            border-radius: 0;
+            cursor: pointer;
+            padding: 0;
+            transition: all 0.15s;
+            margin: -0.5px;
+        }
+
+        .position-grid button:hover {
+            background: #555;
+            border-color: #667eea;
+        }
+
+        .position-grid button.active {
+            background: #667eea;
+            border-color: #667eea;
+        }
+
+        /* 连线说明 */
+        .connector-legend {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 11px;
+            color: #aaa;
+        }
+
+        .legend-line {
+            width: 30px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        /* 选中状态指示 */
+        .selected-info {
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid #667eea;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            font-size: 12px;
+        }
+
+        .selected-info .label {
+            color: #888;
+            margin-right: 4px;
+        }
+
+        .selected-info .value {
+            color: #00d4ff;
+            font-family: monospace;
+        }
+
+        .no-selection {
+            color: #666;
+            font-style: italic;
+            text-align: center;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+
+        /* 连线列表 */
+        .connector-list {
+            /* 移除 margin-bottom */
+        }
+
+        .connector-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            margin-bottom: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 11px;
+        }
+
+        .connector-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .connector-item.selected {
+            background: rgba(102, 126, 234, 0.3);
+            border: 1px solid #667eea;
+        }
+
+        .connector-item .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .connector-item .connector-name {
+            flex: 1;
+            color: #ccc;
+        }
+
+        .connector-item .connector-route {
+            color: #888;
+            font-family: monospace;
+            font-size: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>IsoConnector 连线渲染测试</h1>
+        <span class="badge">Demo</span>
+    </div>
+
+    <!-- 左侧连线列表面板 -->
+    <div class="list-panel">
+        <div class="panel-title">连线列表</div>
+        <div class="connector-list" id="connector-list">
+            <!-- 动态生成 -->
+        </div>
+
+        <div id="selection-status" style="margin-top: 12px;">
+            <div class="no-selection">点击连线或从列表中选择</div>
+        </div>
+
+        <div class="config-section"
+            style="margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div class="config-section-title">场景角度</div>
+            <div class="config-row">
+                <label>rotateX (俯视角): <span id="rotateX-value">60</span>°</label>
+                <input type="range" id="rotateX-slider" min="30" max="80" value="60" step="1">
+            </div>
+            <div class="config-row">
+                <label>rotateZ (旋转角): <span id="rotateZ-value">45</span>°</label>
+                <input type="range" id="rotateZ-slider" min="20" max="70" value="45" step="1">
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧控制面板 -->
+    <div class="config-panel">
+        <div class="config-title">连线配置</div>
+
+        <div class="config-section" id="connector-config" style="display: none;">
+            <div class="config-section-title">连线属性</div>
+            <div class="config-row">
+                <label>路由方式</label>
+                <select id="route-select">
+                    <option value="direct">direct (直线)</option>
+                    <option value="x-y">x-y (先X后Y)</option>
+                    <option value="y-x">y-x (先Y后X)</option>
+                    <option value="x-z">x-z (先X后Z)</option>
+                    <option value="z-x">z-x (先Z后X)</option>
+                    <option value="y-z">y-z (先Y后Z)</option>
+                    <option value="z-y">z-y (先Z后Y)</option>
+                    <option value="x-y-z">x-y-z (三轴)</option>
+                </select>
+            </div>
+            <div class="config-row">
+                <label>线条颜色</label>
+                <input type="color" id="color-input" value="#00d4ff">
+            </div>
+            <div class="config-row">
+                <label>线条宽度: <span id="width-value">2</span>px</label>
+                <input type="range" id="width-slider" min="1" max="8" value="2" step="1">
+            </div>
+            <div class="config-row">
+                <label>线条样式</label>
+                <select id="style-select">
+                    <option value="solid">solid (实线)</option>
+                    <option value="dashed">dashed (虚线)</option>
+                    <option value="dotted">dotted (点线)</option>
+                </select>
+            </div>
+            <div class="config-row">
+                <label>圆角半径: <span id="radius-value">8</span>px</label>
+                <input type="range" id="radius-slider" min="0" max="30" value="8" step="1">
+            </div>
+            <div class="config-row">
+                <label>垂直延伸: <span id="perp-value">0</span>px</label>
+                <input type="range" id="perp-slider" min="0" max="100" value="0" step="5">
+            </div>
+        </div>
+
+        <div class="config-section" id="animation-config" style="display: none;">
+            <div class="config-section-title">动画效果</div>
+            <div class="config-row">
+                <label>动画类型</label>
+                <select id="animation-select">
+                    <option value="none">none (无)</option>
+                    <option value="flow">flow (流动)</option>
+                    <option value="pulse">pulse (脉冲)</option>
+                    <option value="glow">glow (发光)</option>
+                </select>
+            </div>
+            <div class="config-row">
+                <label>动画速度: <span id="speed-value">1</span>x</label>
+                <input type="range" id="speed-slider" min="0.1" max="3" value="1" step="0.1">
+            </div>
+        </div>
+
+        <!-- 粒子（发光小球）配置 -->
+        <div class="config-section" id="particle-config" style="display: none;">
+            <div class="config-section-title">数据传输粒子</div>
+            <div class="checkbox-row">
+                <input type="checkbox" id="particles-enabled">
+                <label for="particles-enabled">启用粒子</label>
+            </div>
+            <div class="config-row">
+                <label>粒子颜色</label>
+                <input type="color" id="particle-color-input" value="#ffffff">
+            </div>
+            <div class="config-row">
+                <label>粒子大小: <span id="particle-size-value">8</span>px</label>
+                <input type="range" id="particle-size-slider" min="4" max="20" value="8" step="1">
+            </div>
+            <div class="config-row">
+                <label>发射频率: <span id="particle-rate-value">2</span>/秒</label>
+                <input type="range" id="particle-rate-slider" min="0.5" max="10" value="2" step="0.5">
+            </div>
+            <div class="config-row">
+                <label>移动速度: <span id="particle-speed-value">0.5</span></label>
+                <input type="range" id="particle-speed-slider" min="0.1" max="2" value="0.5" step="0.1">
+            </div>
+            <div class="config-row">
+                <label>粒子特效</label>
+                <select id="particle-effect-select">
+                    <option value="none">none (无)</option>
+                    <option value="glow" selected>glow (发光)</option>
+                    <option value="pulse">pulse (脉冲)</option>
+                    <option value="trail">trail (拖尾)</option>
+                    <option value="rainbow">rainbow (彩虹)</option>
+                    <option value="spark">spark (火花)</option>
+                </select>
+            </div>
+            <div class="config-row">
+                <label>粒子方向</label>
+                <select id="particle-direction-select">
+                    <option value="forward">forward (正向)</option>
+                    <option value="backward">backward (反向)</option>
+                    <option value="bidirectional">bidirectional (双向)</option>
+                </select>
+            </div>
+            <div class="config-row">
+                <label>拖尾长度: <span id="particle-trail-value">3</span></label>
+                <input type="range" id="particle-trail-slider" min="1" max="8" value="3" step="1">
+            </div>
+        </div>
+
+        <div class="config-section" id="position-config" style="display: none;">
+            <div class="config-section-title">连接点位置</div>
+            <div class="position-row">
+                <label>起点</label>
+                <select id="from-face-select">
+                    <option value="top">顶面</option>
+                    <option value="bottom">底面</option>
+                    <option value="front">前面</option>
+                    <option value="back">后面</option>
+                    <option value="left">左面</option>
+                    <option value="right">右面</option>
+                </select>
+                <div class="position-grid" id="from-position-grid">
+                    <button data-pos="tl"></button>
+                    <button data-pos="tc"></button>
+                    <button data-pos="tr"></button>
+                    <button data-pos="ml"></button>
+                    <button data-pos="mc"></button>
+                    <button data-pos="mr"></button>
+                    <button data-pos="bl"></button>
+                    <button data-pos="bc"></button>
+                    <button data-pos="br"></button>
+                </div>
+            </div>
+            <div class="position-row">
+                <label>终点</label>
+                <select id="to-face-select">
+                    <option value="top">顶面</option>
+                    <option value="bottom">底面</option>
+                    <option value="front">前面</option>
+                    <option value="back">后面</option>
+                    <option value="left">左面</option>
+                    <option value="right">右面</option>
+                </select>
+                <div class="position-grid" id="to-position-grid">
+                    <button data-pos="tl"></button>
+                    <button data-pos="tc"></button>
+                    <button data-pos="tr"></button>
+                    <button data-pos="ml"></button>
+                    <button data-pos="mc"></button>
+                    <button data-pos="mr"></button>
+                    <button data-pos="bl"></button>
+                    <button data-pos="bc"></button>
+                    <button data-pos="br"></button>
+                </div>
+            </div>
+        </div>
+
+        <button id="reset-btn" style="display: none;">重置当前连线</button>
+        <button id="random-btn"
+            style="display: none; background: linear-gradient(135deg, #10B981 0%, #059669 100%);">随机配置</button>
+        <button id="deselect-btn"
+            style="display: none; background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%);">取消选中</button>
+    </div>
+
+    <iso-scene center-origin width="1200" height="800">
+
+        <!-- 中心服务器 -->
+        <iso-cube entity-id="server" x="0" y="0" z="0" width="100" height="100" depth="60"
+            top-color="rgba(16, 185, 129, 0.5)" front-color="rgba(5, 150, 105, 0.5)"
+            right-color="rgba(4, 120, 87, 0.5)">
+            <div slot="top" class="server-top">Server</div>
+            <div slot="front" class="server-front">主服务器</div>
+            <div slot="right" class="server-right"></div>
+        </iso-cube>
+
+        <!-- 左上方客户端 -->
+        <iso-cube entity-id="client-1" x="-250" y="-200" z="0" width="70" height="70" depth="50"
+            top-color="rgba(245, 158, 11, 0.5)" front-color="rgba(217, 119, 6, 0.5)"
+            right-color="rgba(180, 83, 9, 0.5)">
+            <div slot="top" class="client-top">C1</div>
+            <div slot="front" class="client-front">客户端1</div>
+            <div slot="right" class="client-right"></div>
+        </iso-cube>
+
+        <!-- 右上方客户端 -->
+        <iso-cube entity-id="client-2" x="250" y="-200" z="0" width="70" height="70" depth="50"
+            top-color="rgba(245, 158, 11, 0.5)" front-color="rgba(217, 119, 6, 0.5)"
+            right-color="rgba(180, 83, 9, 0.5)">
+            <div slot="top" class="client-top">C2</div>
+            <div slot="front" class="client-front">客户端2</div>
+            <div slot="right" class="client-right"></div>
+        </iso-cube>
+
+        <!-- 左下方存储 -->
+        <iso-cube entity-id="storage-1" x="-250" y="200" z="0" width="80" height="60" depth="40"
+            top-color="rgba(236, 72, 153, 0.5)" front-color="rgba(219, 39, 119, 0.5)"
+            right-color="rgba(190, 24, 93, 0.5)">
+            <div slot="top" class="storage-top">S1</div>
+            <div slot="front" class="storage-front">存储1</div>
+            <div slot="right" class="storage-right"></div>
+        </iso-cube>
+
+        <!-- 右下方存储 -->
+        <iso-cube entity-id="storage-2" x="250" y="200" z="0" width="80" height="60" depth="40"
+            top-color="rgba(236, 72, 153, 0.5)" front-color="rgba(219, 39, 119, 0.5)"
+            right-color="rgba(190, 24, 93, 0.5)">
+            <div slot="top" class="storage-top">S2</div>
+            <div slot="front" class="storage-front">存储2</div>
+            <div slot="right" class="storage-right"></div>
+        </iso-cube>
+
+        <!-- 高处节点 -->
+        <iso-cube entity-id="node-high" x="0" y="-250" z="80" width="60" height="60" depth="40"
+            top-color="rgba(102, 126, 234, 0.5)" front-color="rgba(90, 103, 216, 0.5)"
+            right-color="rgba(76, 81, 191, 0.5)">
+            <div slot="top" class="box-top">High</div>
+            <div slot="front" class="box-front">高层节点</div>
+            <div slot="right" class="box-right"></div>
+        </iso-cube>
+
+        <!-- 低处节点 -->
+        <iso-cube entity-id="node-low" x="0" y="250" z="-40" width="60" height="60" depth="40"
+            top-color="rgba(102, 126, 234, 0.5)" front-color="rgba(90, 103, 216, 0.5)"
+            right-color="rgba(76, 81, 191, 0.5)">
+            <div slot="top" class="box-top">Low</div>
+            <div slot="front" class="box-front">低层节点</div>
+            <div slot="right" class="box-right"></div>
+        </iso-cube>
+
+        <!-- ========== 连接线 ========== -->
+
+        <!-- 测试连线1: server -> client-1 -->
+        <iso-connector id="conn-1" slot="connectors" from="server" to="client-1" from-anchor="bottom:tl"
+            to-anchor="bottom:br" color="#00d4ff" width="2" route="x-y" corner-radius="8" animation="flow"
+            animate-speed="1">
+        </iso-connector>
+
+        <!-- 连线2: server -> client-2 -->
+        <iso-connector id="conn-2" slot="connectors" from="server" to="client-2" from-anchor="bottom:tr"
+            to-anchor="bottom:bl" color="#10B981" width="2" route="x-z-y" corner-radius="12" animation="flow"
+            animate-speed="0.8">
+        </iso-connector>
+
+        <!-- 连线3: server -> storage-1 -->
+        <iso-connector id="conn-3" slot="connectors" from="server" to="storage-1" from-anchor="bottom:bl"
+            to-anchor="bottom:tr" color="#EC4899" width="2" route="y-x" corner-radius="12" animation="flow"
+            animate-speed="0.6">
+        </iso-connector>
+
+        <!-- 连线4: server -> storage-2 -->
+        <iso-connector id="conn-4" slot="connectors" from="server" to="storage-2" from-anchor="bottom:br"
+            to-anchor="bottom:tl" color="#EC4899" width="2" route="y-x" corner-radius="12" animation="flow"
+            animate-speed="0.6">
+        </iso-connector>
+
+        <!-- 连线5: client-1 -> storage-1 -->
+        <iso-connector id="conn-5" slot="connectors" from="client-1" to="storage-1" from-anchor="bottom:bc"
+            to-anchor="bottom:tc" color="#F59E0B" width="2" route="y-x" corner-radius="8" animation="pulse"
+            animate-speed="0.5">
+        </iso-connector>
+
+        <!-- 连线6: client-2 -> storage-2 -->
+        <iso-connector id="conn-6" slot="connectors" from="client-2" to="storage-2" from-anchor="bottom:bc"
+            to-anchor="bottom:tc" color="#F59E0B" width="2" route="y-x" corner-radius="8" animation="pulse"
+            animate-speed="0.5">
+        </iso-connector>
+
+        <!-- 连线7: server -> node-high (Z轴连接) - 带粒子 -->
+        <iso-connector id="conn-7" slot="connectors" from="server" to="node-high" from-anchor="top:tc"
+            to-anchor="bottom:bc" color="#667eea" width="3" route="y-z" corner-radius="10" animation="glow"
+            animate-speed="0.8" particles particle-color="#ffffff" particle-size="10" particle-rate="2"
+            particle-speed="0.4" particle-effect="glow" particle-direction="forward">
+        </iso-connector>
+
+        <!-- 连线8: server -> node-low (Z轴连接) - 带拖尾粒子 -->
+        <iso-connector id="conn-8" slot="connectors" from="server" to="node-low" from-anchor="bottom:bc"
+            to-anchor="top:tc" color="#667eea" width="3" route="y-z" corner-radius="10" animation="glow"
+            animate-speed="0.8" particles particle-color="#00ff88" particle-size="8" particle-rate="3"
+            particle-speed="0.6" particle-effect="trail" particle-trail-length="5" particle-direction="forward">
+        </iso-connector>
+
+        <!-- 连线9: client-1 -> client-2 (直线) - 双向彩虹粒子 -->
+        <iso-connector id="conn-9" slot="connectors" from="client-1" to="client-2" from-anchor="bottom:mr"
+            to-anchor="bottom:ml" color="#8B5CF6" width="2" route="direct" line-style="dashed" animation="none"
+            particles particle-size="6" particle-rate="4" particle-speed="0.8" particle-effect="rainbow"
+            particle-direction="bidirectional">
+        </iso-connector>
+
+    </iso-scene>
+
+    <script type="module">
+        import './src/components/IsoScene.ts'
+        import './src/components/IsoCube.ts'
+        import './src/components/IsoConnector.ts'
+
+        // 当前选中的连线
+        let selectedConnector = null
+
+        // 控件元素
+        const rotateXSlider = document.getElementById('rotateX-slider')
+        const rotateZSlider = document.getElementById('rotateZ-slider')
+        const rotateXValue = document.getElementById('rotateX-value')
+        const rotateZValue = document.getElementById('rotateZ-value')
+
+        const routeSelect = document.getElementById('route-select')
+        const colorInput = document.getElementById('color-input')
+        const widthSlider = document.getElementById('width-slider')
+        const widthValue = document.getElementById('width-value')
+        const styleSelect = document.getElementById('style-select')
+        const radiusSlider = document.getElementById('radius-slider')
+        const radiusValue = document.getElementById('radius-value')
+        const perpSlider = document.getElementById('perp-slider')
+        const perpValue = document.getElementById('perp-value')
+
+        const animationSelect = document.getElementById('animation-select')
+        const speedSlider = document.getElementById('speed-slider')
+        const speedValue = document.getElementById('speed-value')
+
+        // 粒子控件
+        const particlesEnabled = document.getElementById('particles-enabled')
+        const particleColorInput = document.getElementById('particle-color-input')
+        const particleSizeSlider = document.getElementById('particle-size-slider')
+        const particleSizeValue = document.getElementById('particle-size-value')
+        const particleRateSlider = document.getElementById('particle-rate-slider')
+        const particleRateValue = document.getElementById('particle-rate-value')
+        const particleSpeedSlider = document.getElementById('particle-speed-slider')
+        const particleSpeedValue = document.getElementById('particle-speed-value')
+        const particleEffectSelect = document.getElementById('particle-effect-select')
+        const particleDirectionSelect = document.getElementById('particle-direction-select')
+        const particleTrailSlider = document.getElementById('particle-trail-slider')
+        const particleTrailValue = document.getElementById('particle-trail-value')
+        const particleConfig = document.getElementById('particle-config')
+
+        const fromFaceSelect = document.getElementById('from-face-select')
+        const fromPositionGrid = document.getElementById('from-position-grid')
+        const toFaceSelect = document.getElementById('to-face-select')
+        const toPositionGrid = document.getElementById('to-position-grid')
+
+        const resetBtn = document.getElementById('reset-btn')
+        const randomBtn = document.getElementById('random-btn')
+        const deselectBtn = document.getElementById('deselect-btn')
+
+        const connectorList = document.getElementById('connector-list')
+        const selectionStatus = document.getElementById('selection-status')
+        const connectorConfig = document.getElementById('connector-config')
+        const animationConfig = document.getElementById('animation-config')
+        const positionConfig = document.getElementById('position-config')
+
+        // 存储原始属性用于重置
+        const originalAttrs = new Map()
+
+        // 更新场景角度
+        function updateAngles() {
+            const rotateX = parseInt(rotateXSlider.value)
+            const rotateZ = parseInt(rotateZSlider.value)
+            rotateXValue.textContent = rotateX
+            rotateZValue.textContent = rotateZ
+
+            const scene = document.querySelector('iso-scene')
+            if (scene && scene.updateAngles) {
+                scene.updateAngles(rotateX, rotateZ)
+            }
+
+            window.dispatchEvent(new CustomEvent('iso-angles-changed', {
+                detail: { rotateX, rotateZ }
+            }))
+        }
+
+        // 获取连线的显示名称
+        function getConnectorName(connector) {
+            const from = connector.getAttribute('from') || '?'
+            const to = connector.getAttribute('to') || '?'
+            return `${from} → ${to}`
+        }
+
+        // 保存连线的原始属性
+        function saveOriginalAttrs(connector) {
+            if (!originalAttrs.has(connector.id)) {
+                originalAttrs.set(connector.id, {
+                    route: connector.getAttribute('route') || 'x-y',
+                    color: connector.getAttribute('color') || '#00d4ff',
+                    width: connector.getAttribute('width') || '2',
+                    lineStyle: connector.getAttribute('line-style') || 'solid',
+                    cornerRadius: connector.getAttribute('corner-radius') || '8',
+                    perpendicularLength: connector.getAttribute('perpendicular-length') || '0',
+                    animation: connector.getAttribute('animation') || 'none',
+                    animateSpeed: connector.getAttribute('animate-speed') || '1',
+                    fromAnchor: connector.getAttribute('from-anchor') || 'top:mc',
+                    toAnchor: connector.getAttribute('to-anchor') || 'top:mc',
+                    // 粒子属性
+                    particles: connector.hasAttribute('particles'),
+                    particleColor: connector.getAttribute('particle-color') || '',
+                    particleSize: connector.getAttribute('particle-size') || '8',
+                    particleRate: connector.getAttribute('particle-rate') || '2',
+                    particleSpeed: connector.getAttribute('particle-speed') || '0.5',
+                    particleEffect: connector.getAttribute('particle-effect') || 'glow',
+                    particleDirection: connector.getAttribute('particle-direction') || 'forward',
+                    particleTrailLength: connector.getAttribute('particle-trail-length') || '3',
+                })
+            }
+        }
+
+        // 解析 anchor 字符串
+        function parseAnchor(anchor) {
+            const [face, position] = (anchor || 'top:mc').split(':')
+            return { face: face || 'top', position: position || 'mc' }
+        }
+
+        // 生成 anchor 字符串
+        function buildAnchor(face, position) {
+            return `${face}:${position}`
+        }
+
+        // 生成连线列表
+        function buildConnectorList() {
+            const connectors = document.querySelectorAll('iso-connector')
+            connectorList.innerHTML = ''
+
+            connectors.forEach((connector, index) => {
+                // 确保有 ID
+                if (!connector.id) {
+                    connector.id = `conn-auto-${index}`
+                }
+
+                // 保存原始属性
+                saveOriginalAttrs(connector)
+
+                const item = document.createElement('div')
+                item.className = 'connector-item'
+                item.dataset.connectorId = connector.id
+
+                const color = connector.getAttribute('color') || '#00d4ff'
+                const route = connector.getAttribute('route') || 'x-y'
+                const name = getConnectorName(connector)
+
+                item.innerHTML = `
+          <div class="color-dot" style="background: ${color};"></div>
+          <span class="connector-name">${name}</span>
+          <span class="connector-route">${route}</span>
+        `
+
+                item.addEventListener('click', () => selectConnector(connector))
+                connectorList.appendChild(item)
+            })
+        }
+
+        // 选中连线
+        function selectConnector(connector) {
+            // 取消之前的选中
+            if (selectedConnector) {
+                selectedConnector.selected = false
+            }
+
+            selectedConnector = connector
+
+            // 高亮选中的连线（使用 selected 属性，避免 filter 破坏 3D 变换）
+            connector.selected = true
+
+            // 更新列表选中状态
+            document.querySelectorAll('.connector-item').forEach(item => {
+                item.classList.toggle('selected', item.dataset.connectorId === connector.id)
+            })
+
+            // 显示配置面板
+            showConfigPanel(connector)
+
+            // 同步控件值
+            syncControlsFromConnector(connector)
+        }
+
+        // 取消选中
+        function deselectConnector() {
+            if (selectedConnector) {
+                selectedConnector.selected = false
+                selectedConnector = null
+            }
+
+            document.querySelectorAll('.connector-item').forEach(item => {
+                item.classList.remove('selected')
+            })
+
+            hideConfigPanel()
+        }
+
+        // 显示配置面板
+        function showConfigPanel(connector) {
+            const name = getConnectorName(connector)
+            const color = connector.getAttribute('color') || '#00d4ff'
+
+            selectionStatus.innerHTML = `
+        <div class="selected-info">
+          <span class="label">选中:</span>
+          <span class="value">${name}</span>
+          <div style="margin-top: 4px;">
+            <span class="label">ID:</span>
+            <span class="value">${connector.id}</span>
+          </div>
+        </div>
+      `
+
+            connectorConfig.style.display = 'block'
+            animationConfig.style.display = 'block'
+            particleConfig.style.display = 'block'
+            positionConfig.style.display = 'block'
+            resetBtn.style.display = 'block'
+            randomBtn.style.display = 'block'
+            deselectBtn.style.display = 'block'
+        }
+
+        // 隐藏配置面板
+        function hideConfigPanel() {
+            selectionStatus.innerHTML = '<div class="no-selection">点击连线或从列表中选择</div>'
+            connectorConfig.style.display = 'none'
+            animationConfig.style.display = 'none'
+            particleConfig.style.display = 'none'
+            positionConfig.style.display = 'none'
+            resetBtn.style.display = 'none'
+            randomBtn.style.display = 'none'
+            deselectBtn.style.display = 'none'
+        }
+
+        // 从连线同步控件值
+        function syncControlsFromConnector(connector) {
+            routeSelect.value = connector.getAttribute('route') || 'x-y'
+            colorInput.value = connector.getAttribute('color') || '#00d4ff'
+            widthSlider.value = connector.getAttribute('width') || '2'
+            styleSelect.value = connector.getAttribute('line-style') || 'solid'
+            radiusSlider.value = connector.getAttribute('corner-radius') || '8'
+            perpSlider.value = connector.getAttribute('perpendicular-length') || '0'
+            animationSelect.value = connector.getAttribute('animation') || 'none'
+            speedSlider.value = connector.getAttribute('animate-speed') || '1'
+
+            // 粒子属性
+            particlesEnabled.checked = connector.hasAttribute('particles')
+            particleColorInput.value = connector.getAttribute('particle-color') || connector.getAttribute('color') || '#ffffff'
+            particleSizeSlider.value = connector.getAttribute('particle-size') || '8'
+            particleRateSlider.value = connector.getAttribute('particle-rate') || '2'
+            particleSpeedSlider.value = connector.getAttribute('particle-speed') || '0.5'
+            particleEffectSelect.value = connector.getAttribute('particle-effect') || 'glow'
+            particleDirectionSelect.value = connector.getAttribute('particle-direction') || 'forward'
+            particleTrailSlider.value = connector.getAttribute('particle-trail-length') || '3'
+
+            // 解析 anchor 并更新控件
+            const fromAnchor = parseAnchor(connector.getAttribute('from-anchor'))
+            const toAnchor = parseAnchor(connector.getAttribute('to-anchor'))
+
+            fromFaceSelect.value = fromAnchor.face
+            toFaceSelect.value = toAnchor.face
+
+            // 更新九宫格选中状态
+            updatePositionGrid(fromPositionGrid, fromAnchor.position)
+            updatePositionGrid(toPositionGrid, toAnchor.position)
+
+            // 更新显示值
+            widthValue.textContent = widthSlider.value
+            radiusValue.textContent = radiusSlider.value
+            perpValue.textContent = perpSlider.value
+            speedValue.textContent = speedSlider.value
+            particleSizeValue.textContent = particleSizeSlider.value
+            particleRateValue.textContent = particleRateSlider.value
+            particleSpeedValue.textContent = particleSpeedSlider.value
+            particleTrailValue.textContent = particleTrailSlider.value
+        }
+
+        // 更新九宫格选中状态
+        function updatePositionGrid(grid, position) {
+            grid.querySelectorAll('button').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.pos === position)
+            })
+        }
+
+        // 获取九宫格当前选中位置
+        function getGridPosition(grid) {
+            const activeBtn = grid.querySelector('button.active')
+            return activeBtn ? activeBtn.dataset.pos : 'mc'
+        }
+
+        // 更新选中连线的属性
+        function updateSelectedConnector() {
+            if (!selectedConnector) return
+
+            selectedConnector.setAttribute('route', routeSelect.value)
+            selectedConnector.setAttribute('color', colorInput.value)
+            selectedConnector.setAttribute('width', widthSlider.value)
+            selectedConnector.setAttribute('line-style', styleSelect.value)
+            selectedConnector.setAttribute('corner-radius', radiusSlider.value)
+            selectedConnector.setAttribute('perpendicular-length', perpSlider.value)
+            selectedConnector.setAttribute('animation', animationSelect.value)
+            selectedConnector.setAttribute('animate-speed', speedSlider.value)
+
+            // 粒子属性
+            if (particlesEnabled.checked) {
+                selectedConnector.setAttribute('particles', '')
+            } else {
+                selectedConnector.removeAttribute('particles')
+            }
+            selectedConnector.setAttribute('particle-color', particleColorInput.value)
+            selectedConnector.setAttribute('particle-size', particleSizeSlider.value)
+            selectedConnector.setAttribute('particle-rate', particleRateSlider.value)
+            selectedConnector.setAttribute('particle-speed', particleSpeedSlider.value)
+            selectedConnector.setAttribute('particle-effect', particleEffectSelect.value)
+            selectedConnector.setAttribute('particle-direction', particleDirectionSelect.value)
+            selectedConnector.setAttribute('particle-trail-length', particleTrailSlider.value)
+
+            // 使用新的 anchor 格式
+            selectedConnector.setAttribute('from-anchor', buildAnchor(fromFaceSelect.value, getGridPosition(fromPositionGrid)))
+            selectedConnector.setAttribute('to-anchor', buildAnchor(toFaceSelect.value, getGridPosition(toPositionGrid)))
+
+            widthValue.textContent = widthSlider.value
+            radiusValue.textContent = radiusSlider.value
+            perpValue.textContent = perpSlider.value
+            speedValue.textContent = speedSlider.value
+            particleSizeValue.textContent = particleSizeSlider.value
+            particleRateValue.textContent = particleRateSlider.value
+            particleSpeedValue.textContent = particleSpeedSlider.value
+            particleTrailValue.textContent = particleTrailSlider.value
+
+            // 更新列表中的颜色和路由显示
+            const listItem = document.querySelector(`.connector-item[data-connector-id="${selectedConnector.id}"]`)
+            if (listItem) {
+                listItem.querySelector('.color-dot').style.background = colorInput.value
+                listItem.querySelector('.connector-route').textContent = routeSelect.value
+            }
+        }
+
+        // 重置当前连线
+        function resetCurrentConnector() {
+            if (!selectedConnector) return
+
+            const original = originalAttrs.get(selectedConnector.id)
+            if (!original) return
+
+            selectedConnector.setAttribute('route', original.route)
+            selectedConnector.setAttribute('color', original.color)
+            selectedConnector.setAttribute('width', original.width)
+            selectedConnector.setAttribute('line-style', original.lineStyle)
+            selectedConnector.setAttribute('corner-radius', original.cornerRadius)
+            selectedConnector.setAttribute('perpendicular-length', original.perpendicularLength)
+            selectedConnector.setAttribute('animation', original.animation)
+            selectedConnector.setAttribute('animate-speed', original.animateSpeed)
+            selectedConnector.setAttribute('from-anchor', original.fromAnchor)
+            selectedConnector.setAttribute('to-anchor', original.toAnchor)
+
+            // 粒子属性重置
+            if (original.particles) {
+                selectedConnector.setAttribute('particles', '')
+            } else {
+                selectedConnector.removeAttribute('particles')
+            }
+            selectedConnector.setAttribute('particle-color', original.particleColor)
+            selectedConnector.setAttribute('particle-size', original.particleSize)
+            selectedConnector.setAttribute('particle-rate', original.particleRate)
+            selectedConnector.setAttribute('particle-speed', original.particleSpeed)
+            selectedConnector.setAttribute('particle-effect', original.particleEffect)
+            selectedConnector.setAttribute('particle-direction', original.particleDirection)
+            selectedConnector.setAttribute('particle-trail-length', original.particleTrailLength)
+
+            syncControlsFromConnector(selectedConnector)
+
+            // 更新列表
+            const listItem = document.querySelector(`.connector-item[data-connector-id="${selectedConnector.id}"]`)
+            if (listItem) {
+                listItem.querySelector('.color-dot').style.background = original.color
+                listItem.querySelector('.connector-route').textContent = original.route
+            }
+        }
+
+        // 随机配置
+        function randomConfig() {
+            if (!selectedConnector) return
+
+            const routes = ['direct', 'x-y', 'y-x', 'x-z', 'z-x', 'y-z', 'z-y', 'x-y-z']
+            const styles = ['solid', 'dashed', 'dotted']
+            const animations = ['none', 'flow', 'pulse', 'glow']
+            const faces = ['top', 'bottom', 'front', 'back', 'left', 'right']
+            const positions = ['tl', 'tc', 'tr', 'ml', 'mc', 'mr', 'bl', 'bc', 'br']
+            const particleEffects = ['none', 'glow', 'pulse', 'trail', 'rainbow', 'spark']
+            const particleDirections = ['forward', 'backward', 'bidirectional']
+
+            const randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')
+            const randomParticleColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')
+
+            routeSelect.value = routes[Math.floor(Math.random() * routes.length)]
+            colorInput.value = randomColor
+            widthSlider.value = Math.floor(Math.random() * 6) + 1
+            styleSelect.value = styles[Math.floor(Math.random() * styles.length)]
+            radiusSlider.value = Math.floor(Math.random() * 20)
+            animationSelect.value = animations[Math.floor(Math.random() * animations.length)]
+            speedSlider.value = (Math.random() * 2 + 0.2).toFixed(1)
+            fromFaceSelect.value = faces[Math.floor(Math.random() * faces.length)]
+            updatePositionGrid(fromPositionGrid, positions[Math.floor(Math.random() * positions.length)])
+            toFaceSelect.value = faces[Math.floor(Math.random() * faces.length)]
+            updatePositionGrid(toPositionGrid, positions[Math.floor(Math.random() * positions.length)])
+
+            // 随机粒子配置
+            particlesEnabled.checked = Math.random() > 0.5
+            particleColorInput.value = randomParticleColor
+            particleSizeSlider.value = Math.floor(Math.random() * 12) + 4
+            particleRateSlider.value = (Math.random() * 5 + 0.5).toFixed(1)
+            particleSpeedSlider.value = (Math.random() * 1.5 + 0.2).toFixed(1)
+            particleEffectSelect.value = particleEffects[Math.floor(Math.random() * particleEffects.length)]
+            particleDirectionSelect.value = particleDirections[Math.floor(Math.random() * particleDirections.length)]
+            particleTrailSlider.value = Math.floor(Math.random() * 6) + 2
+
+            updateSelectedConnector()
+        }
+
+        // 绑定事件
+        rotateXSlider.addEventListener('input', updateAngles)
+        rotateZSlider.addEventListener('input', updateAngles)
+
+        routeSelect.addEventListener('change', updateSelectedConnector)
+        colorInput.addEventListener('input', updateSelectedConnector)
+        widthSlider.addEventListener('input', updateSelectedConnector)
+        styleSelect.addEventListener('change', updateSelectedConnector)
+        radiusSlider.addEventListener('input', updateSelectedConnector)
+        perpSlider.addEventListener('input', updateSelectedConnector)
+        animationSelect.addEventListener('change', updateSelectedConnector)
+        speedSlider.addEventListener('input', updateSelectedConnector)
+        fromFaceSelect.addEventListener('change', updateSelectedConnector)
+        toFaceSelect.addEventListener('change', updateSelectedConnector)
+
+        // 粒子控件事件
+        particlesEnabled.addEventListener('change', updateSelectedConnector)
+        particleColorInput.addEventListener('input', updateSelectedConnector)
+        particleSizeSlider.addEventListener('input', updateSelectedConnector)
+        particleRateSlider.addEventListener('input', updateSelectedConnector)
+        particleSpeedSlider.addEventListener('input', updateSelectedConnector)
+        particleEffectSelect.addEventListener('change', updateSelectedConnector)
+        particleDirectionSelect.addEventListener('change', updateSelectedConnector)
+        particleTrailSlider.addEventListener('input', updateSelectedConnector)
+
+        // 九宫格按钮事件
+        fromPositionGrid.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                updatePositionGrid(fromPositionGrid, btn.dataset.pos)
+                updateSelectedConnector()
+            })
+        })
+        toPositionGrid.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                updatePositionGrid(toPositionGrid, btn.dataset.pos)
+                updateSelectedConnector()
+            })
+        })
+
+        resetBtn.addEventListener('click', resetCurrentConnector)
+        randomBtn.addEventListener('click', randomConfig)
+        deselectBtn.addEventListener('click', deselectConnector)
+
+        // 等待组件加载后初始化
+        customElements.whenDefined('iso-connector').then(() => {
+            setTimeout(() => {
+                buildConnectorList()
+
+                // 为所有连线添加点击事件
+                document.querySelectorAll('iso-connector').forEach(connector => {
+                    connector.addEventListener('click', (e) => {
+                        e.stopPropagation()
+                        selectConnector(connector)
+                    })
+                })
+
+                // 点击空白处取消选中
+                document.querySelector('iso-scene').addEventListener('click', (e) => {
+                    if (e.target.tagName === 'ISO-SCENE') {
+                        deselectConnector()
+                    }
+                })
+            }, 200)
+        })
+    </script>
+</body>
+
+</html>

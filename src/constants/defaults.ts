@@ -37,9 +37,23 @@ export const DEFAULT_POSITION: IsometricPosition = {
 }
 
 /**
- * 默认等距角度（用于 CSS 3D 变换）
+ * 等距视图角度配置
+ * 
+ * rotateX: 绕 X 轴旋转角度（俯视倾斜角），控制 Y 轴压缩程度
+ *          60° 是标准等距视图，值越小越接近俯视图
+ * 
+ * rotateZ: 绕 Z 轴旋转角度（平面旋转角），控制 X/Y 轴方向
+ *          45° 使 X 轴向右下，Y 轴向左下
  */
-export const DEFAULT_ISO_ANGLE = 60
+export const ISO_ANGLES = {
+  rotateX: 60,  // 俯视倾斜角（度）
+  rotateZ: 45   // 平面旋转角（度）
+} as const
+
+/**
+ * 默认等距角度（rotateX，保留以兼容旧代码）
+ */
+export const DEFAULT_ISO_ANGLE = ISO_ANGLES.rotateX
 
 /**
  * 默认透视距离
