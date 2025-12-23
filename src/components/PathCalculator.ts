@@ -40,19 +40,10 @@ export interface PathWithZIndex {
  * 负责计算等距连线的路径
  */
 export class PathCalculator {
-  private cornerRadius: number
   private zOffset: number
 
-  constructor(cornerRadius = 8, zOffset = 0) {
-    this.cornerRadius = cornerRadius
+  constructor(zOffset = 0) {
     this.zOffset = zOffset
-  }
-
-  /**
-   * 设置圆角半径
-   */
-  setCornerRadius(radius: number): void {
-    this.cornerRadius = radius
   }
 
   /**
@@ -203,15 +194,14 @@ export class PathCalculator {
   }
 
   /**
-   * 生成带圆角的 SVG 路径
+   * 生成 SVG 路径
    */
-  generatePathWithCorners(segments: PathSegment[]): { paths: PathWithZIndex[]; arrowTransform: string } {
+  generatePath(segments: PathSegment[]): { paths: PathWithZIndex[]; arrowTransform: string } {
     if (segments.length === 0) {
       return { paths: [], arrowTransform: '' }
     }
 
     const result: PathWithZIndex[] = []
-    const r = this.cornerRadius
 
     // 收集所有点
     const allPoints: ScreenPoint[] = []
@@ -230,32 +220,8 @@ export class PathCalculator {
     let pathD = `M ${allPoints[0].x.toFixed(2)} ${allPoints[0].y.toFixed(2)}`
 
     for (let i = 1; i < allPoints.length; i++) {
-      const prev = allPoints[i - 1]
       const curr = allPoints[i]
-      const next = allPoints[i + 1]
-
-      if (next && r > 0) {
-        // 有下一个点，需要画圆角
-        const dx1 = curr.x - prev.x
-        const dy1 = curr.y - prev.y
-        const len1 = Math.sqrt(dx1 * dx1 + dy1 * dy1)
-
-        const dx2 = next.x - curr.x
-        const dy2 = next.y - curr.y
-        const len2 = Math.sqrt(dx2 * dx2 + dy2 * dy2)
-
-        const actualR = Math.min(r, len1 / 2, len2 / 2)
-
-        const cornerStartX = curr.x - (dx1 / len1) * actualR
-        const cornerStartY = curr.y - (dy1 / len1) * actualR
-        const cornerEndX = curr.x + (dx2 / len2) * actualR
-        const cornerEndY = curr.y + (dy2 / len2) * actualR
-
-        pathD += ` L ${cornerStartX.toFixed(2)} ${cornerStartY.toFixed(2)}`
-        pathD += ` Q ${curr.x.toFixed(2)} ${curr.y.toFixed(2)} ${cornerEndX.toFixed(2)} ${cornerEndY.toFixed(2)}`
-      } else {
-        pathD += ` L ${curr.x.toFixed(2)} ${curr.y.toFixed(2)}`
-      }
+      pathD += ` L ${curr.x.toFixed(2)} ${curr.y.toFixed(2)}`
     }
 
     // 计算整体 z-index

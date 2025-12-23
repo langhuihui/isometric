@@ -15,7 +15,7 @@
 ## 安装
 
 ```bash
-pnpm install isometric-engine
+pnpm install iso-engine
 ```
 
 ## 快速开始
@@ -24,7 +24,7 @@ pnpm install isometric-engine
 
 ```html
 <script type="module">
-  import 'isometric-engine'
+  import 'iso-engine'
 </script>
 
 <iso-scene center-origin width="800" height="600">
@@ -51,12 +51,10 @@ pnpm install isometric-engine
   <!-- 连接两个实体 -->
   <iso-connector 
     slot="connectors"
-    from="box1" to="box2" 
-    from-anchor="bottom:mr" 
-    to-anchor="bottom:ml"
+    from="box1@bottom:mr" 
+    to="box2@bottom:ml"
     color="#00d4ff" width="2" 
     route="x-y" 
-    corner-radius="12"
     animation="flow">
   </iso-connector>
 </iso-scene>
@@ -65,7 +63,7 @@ pnpm install isometric-engine
 ### 命令式使用（JavaScript API）
 
 ```javascript
-import { IsometricEngine } from 'isometric-engine'
+import { IsometricEngine } from 'iso-engine'
 
 // 创建引擎实例
 const engine = new IsometricEngine()
@@ -121,7 +119,7 @@ engine.addConnectorToScene(connector, scene)
 | `origin-y` | number | 0 | 原点 Y 偏移 |
 | `perspective` | number | 0 | 透视距离（0 为正交投影） |
 
-### `<iso-cube>` 等距实体
+### `<iso-cube>` 等距立方体
 
 基础的 3D 立方体实体，支持自定义各面内容。
 
@@ -147,10 +145,6 @@ engine.addConnectorToScene(connector, scene)
 - `front` - 前面内容
 - `right` - 右面内容
 
-### `<iso-cube>` 简化立方体
-
-预设样式的立方体组件，继承自 `iso-cube`。
-
 ### `<iso-console>` 控制台面板
 
 带倾斜面板的控制台组件，适合展示仪表盘、控制面板等。
@@ -170,34 +164,37 @@ engine.addConnectorToScene(connector, scene)
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `from` | string | - | 起始实体 ID |
-| `to` | string | - | 目标实体 ID |
-| `from-anchor` | string | 'top:mc' | 起始锚点（格式：`face:position`） |
-| `to-anchor` | string | 'top:mc' | 目标锚点（格式：`face:position`） |
+| `from` | string | - | 起始连接点，格式：`entityId` 或 `entityId@face:position` |
+| `to` | string | - | 目标连接点，格式同上 |
 | `color` | string | '#00d4ff' | 连线颜色 |
 | `width` | number | 2 | 连线宽度 |
 | `line-style` | string | 'solid' | 线条样式：`solid` / `dashed` / `dotted` |
 | `route` | string | 'auto' | 路由类型 |
-| `corner-radius` | number | 8 | 转角圆角 |
 | `perpendicular-length` | number | 0 | 垂直延伸距离 |
-| `animation` | string | 'none' | 动画类型：`none` / `flow` / `pulse` / `glow` |
-| `animate-speed` | number | 1 | 动画速度 |
-| `particles` | boolean | false | 是否启用粒子效果 |
-| `particle-color` | string | '' | 粒子颜色（默认使用连线颜色） |
-| `particle-size` | number | 8 | 粒子大小 |
-| `particle-rate` | number | 2 | 粒子发射频率（每秒） |
-| `particle-speed` | number | 0.5 | 粒子移动速度 |
-| `particle-effect` | string | 'glow' | 粒子特效：`none` / `glow` / `trail` / `pulse` / `rainbow` / `spark` |
-| `particle-direction` | string | 'forward' | 粒子方向：`forward` / `backward` / `bidirectional` |
+| `animation` | string | 'none' | 动画配置，格式：`type` 或 `type speed` 或 `type speed color` |
+| `particles` | string | '' | 粒子配置，格式：`color size rate speed effect direction trail` |
 
-**锚点格式：** `face:position`
-- **面类型（face）：** `top` | `bottom` | `front` | `back` | `left` | `right`
-- **位置类型（position）：** 
+**连接点格式：** `entityId@face:position`
+- **entityId**：目标实体的 ID
+- **face**：`top` | `bottom` | `front` | `back` | `left` | `right`
+- **position**：
   - `tl` (top-left) | `tc` (top-center) | `tr` (top-right)
   - `ml` (middle-left) | `mc` (middle-center) | `mr` (middle-right)
   - `bl` (bottom-left) | `bc` (bottom-center) | `br` (bottom-right)
 
-**示例：** `from-anchor="bottom:mr"` 表示从实体底面的右中位置连接
+**示例：** `from="box1@bottom:mr"` 表示从 box1 实体底面的右中位置连接
+
+**动画格式：** `type speed color`
+- `animation="flow"` - 默认速度的流动动画
+- `animation="flow 1.5"` - 1.5 倍速流动动画
+- `animation="glow 1 #ff0000"` - 红色发光动画
+
+**粒子格式：** 空格分隔的参数，支持带单位（顺序无关）
+- `particles="#fff 8px 2hz 500ms glow forward 3trail"` - 带单位的完整配置
+- `particles="500ms 8px 2hz"` - 顺序无关，通过单位识别
+- `particles="8 2 0.5"` - 无单位按顺序解析（size, rate, speed）
+- `particles="rainbow bidirectional"` - 彩虹双向粒子
+- 单位说明：`px`=尺寸, `hz`=频率, `ms`=毫秒速度, `s`=秒速度, `trail`=拖尾长度
 
 **路由类型：** `auto` | `direct` | `x-y` | `y-x` | `x-z` | `z-x` 等轴组合
 

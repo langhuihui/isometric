@@ -547,10 +547,6 @@
                 </select>
             </div>
             <div class="config-row">
-                <label>圆角半径: <span id="radius-value">8</span>px</label>
-                <input type="range" id="radius-slider" min="0" max="30" value="8" step="1">
-            </div>
-            <div class="config-row">
                 <label>垂直延伸: <span id="perp-value">0</span>px</label>
                 <input type="range" id="perp-slider" min="0" max="100" value="0" step="5">
             </div>
@@ -744,60 +740,60 @@
         <!-- ========== 连接线 ========== -->
 
         <!-- 测试连线1: server -> client-1 -->
-        <iso-connector id="conn-1" slot="connectors" from="server" to="client-1" from-anchor="bottom:tl"
-            to-anchor="bottom:br" color="#00d4ff" width="2" route="x-y" corner-radius="8" animation="flow"
-            animate-speed="1">
+        <iso-connector id="conn-1" slot="connectors" 
+            from="server@bottom:tl" to="client-1@bottom:br" 
+            color="#00d4ff" width="2" route="x-y" animation="flow 1">
         </iso-connector>
 
         <!-- 连线2: server -> client-2 -->
-        <iso-connector id="conn-2" slot="connectors" from="server" to="client-2" from-anchor="bottom:tr"
-            to-anchor="bottom:bl" color="#10B981" width="2" route="x-z-y" corner-radius="12" animation="flow"
-            animate-speed="0.8">
+        <iso-connector id="conn-2" slot="connectors" 
+            from="server@bottom:tr" to="client-2@bottom:bl" 
+            color="#10B981" width="2" route="x-z-y" animation="flow 0.8">
         </iso-connector>
 
         <!-- 连线3: server -> storage-1 -->
-        <iso-connector id="conn-3" slot="connectors" from="server" to="storage-1" from-anchor="bottom:bl"
-            to-anchor="bottom:tr" color="#EC4899" width="2" route="y-x" corner-radius="12" animation="flow"
-            animate-speed="0.6">
+        <iso-connector id="conn-3" slot="connectors" 
+            from="server@bottom:bl" to="storage-1@bottom:tr" 
+            color="#EC4899" width="2" route="y-x" animation="flow 0.6">
         </iso-connector>
 
         <!-- 连线4: server -> storage-2 -->
-        <iso-connector id="conn-4" slot="connectors" from="server" to="storage-2" from-anchor="bottom:br"
-            to-anchor="bottom:tl" color="#EC4899" width="2" route="y-x" corner-radius="12" animation="flow"
-            animate-speed="0.6">
+        <iso-connector id="conn-4" slot="connectors" 
+            from="server@bottom:br" to="storage-2@bottom:tl" 
+            color="#EC4899" width="2" route="y-x" animation="flow 0.6">
         </iso-connector>
 
         <!-- 连线5: client-1 -> storage-1 -->
-        <iso-connector id="conn-5" slot="connectors" from="client-1" to="storage-1" from-anchor="bottom:bc"
-            to-anchor="bottom:tc" color="#F59E0B" width="2" route="y-x" corner-radius="8" animation="pulse"
-            animate-speed="0.5">
+        <iso-connector id="conn-5" slot="connectors" 
+            from="client-1@bottom:bc" to="storage-1@bottom:tc" 
+            color="#F59E0B" width="2" route="y-x" animation="pulse 0.5">
         </iso-connector>
 
         <!-- 连线6: client-2 -> storage-2 -->
-        <iso-connector id="conn-6" slot="connectors" from="client-2" to="storage-2" from-anchor="bottom:bc"
-            to-anchor="bottom:tc" color="#F59E0B" width="2" route="y-x" corner-radius="8" animation="pulse"
-            animate-speed="0.5">
+        <iso-connector id="conn-6" slot="connectors" 
+            from="client-2@bottom:bc" to="storage-2@bottom:tc" 
+            color="#F59E0B" width="2" route="y-x" animation="pulse 0.5">
         </iso-connector>
 
         <!-- 连线7: server -> node-high (Z轴连接) - 带粒子 -->
-        <iso-connector id="conn-7" slot="connectors" from="server" to="node-high" from-anchor="top:tc"
-            to-anchor="bottom:bc" color="#667eea" width="3" route="y-z" corner-radius="10" animation="glow"
-            animate-speed="0.8" particles particle-color="#ffffff" particle-size="10" particle-rate="2"
-            particle-speed="0.4" particle-effect="glow" particle-direction="forward">
+        <iso-connector id="conn-7" slot="connectors" 
+            from="server@top:tc" to="node-high@bottom:bc" 
+            color="#667eea" width="3" route="y-z" animation="glow 0.8"
+            particles="#ffffff 10 2 0.4 glow forward">
         </iso-connector>
 
         <!-- 连线8: server -> node-low (Z轴连接) - 带拖尾粒子 -->
-        <iso-connector id="conn-8" slot="connectors" from="server" to="node-low" from-anchor="bottom:bc"
-            to-anchor="top:tc" color="#667eea" width="3" route="y-z" corner-radius="10" animation="glow"
-            animate-speed="0.8" particles particle-color="#00ff88" particle-size="8" particle-rate="3"
-            particle-speed="0.6" particle-effect="trail" particle-trail-length="5" particle-direction="forward">
+        <iso-connector id="conn-8" slot="connectors" 
+            from="server@bottom:bc" to="node-low@top:tc" 
+            color="#667eea" width="3" route="y-z" animation="glow 0.8"
+            particles="#00ff88 8 3 0.6 trail forward 5">
         </iso-connector>
 
         <!-- 连线9: client-1 -> client-2 (直线) - 双向彩虹粒子 -->
-        <iso-connector id="conn-9" slot="connectors" from="client-1" to="client-2" from-anchor="bottom:mr"
-            to-anchor="bottom:ml" color="#8B5CF6" width="2" route="direct" line-style="dashed" animation="none"
-            particles particle-size="6" particle-rate="4" particle-speed="0.8" particle-effect="rainbow"
-            particle-direction="bidirectional">
+        <iso-connector id="conn-9" slot="connectors" 
+            from="client-1@bottom:mr" to="client-2@bottom:ml" 
+            color="#8B5CF6" width="2" route="direct" line-style="dashed" animation="none"
+            particles="6 4 0.8 rainbow bidirectional">
         </iso-connector>
 
     </iso-scene>
@@ -821,8 +817,6 @@
         const widthSlider = document.getElementById('width-slider')
         const widthValue = document.getElementById('width-value')
         const styleSelect = document.getElementById('style-select')
-        const radiusSlider = document.getElementById('radius-slider')
-        const radiusValue = document.getElementById('radius-value')
         const perpSlider = document.getElementById('perp-slider')
         const perpValue = document.getElementById('perp-value')
 
@@ -884,37 +878,116 @@
         function getConnectorName(connector) {
             const from = connector.getAttribute('from') || '?'
             const to = connector.getAttribute('to') || '?'
-            return `${from} → ${to}`
+            // 提取 entityId（去掉 @anchor 部分）
+            const fromId = from.split('@')[0]
+            const toId = to.split('@')[0]
+            return `${fromId} → ${toId}`
+        }
+
+        // 解析连接点字符串 "entityId@face:position"
+        function parseConnection(value) {
+            const atIndex = (value || '').indexOf('@')
+            if (atIndex === -1) {
+                return { entityId: value || '', face: 'top', position: 'mc' }
+            }
+            const entityId = value.substring(0, atIndex)
+            const anchor = value.substring(atIndex + 1)
+            const [face, position] = anchor.split(':')
+            return { entityId, face: face || 'top', position: position || 'mc' }
+        }
+
+        // 构建连接点字符串
+        function buildConnection(entityId, face, position) {
+            return `${entityId}@${face}:${position}`
+        }
+
+        // 解析动画字符串 "type speed color"
+        function parseAnimation(value) {
+            const parts = (value || 'none').trim().split(/\s+/)
+            return {
+                type: parts[0] || 'none',
+                speed: parts[1] ? parseFloat(parts[1]) : 1,
+                color: parts[2] || ''
+            }
+        }
+
+        // 构建动画字符串
+        function buildAnimation(type, speed, color) {
+            let result = type || 'none'
+            if (speed && speed !== 1) result += ` ${speed}`
+            if (color) result += ` ${color}`
+            return result
+        }
+
+        // 解析粒子字符串
+        function parseParticles(value) {
+            const trimmed = (value || '').trim()
+            if (!trimmed || trimmed === 'none') {
+                return { enabled: false, color: '', size: 8, rate: 2, speed: 0.5, effect: 'glow', direction: 'forward', trailLength: 3 }
+            }
+            const parts = trimmed.split(/\s+/)
+            const config = { enabled: true, color: '', size: 8, rate: 2, speed: 0.5, effect: 'glow', direction: 'forward', trailLength: 3 }
+            for (const part of parts) {
+                if (part.startsWith('#') || part.startsWith('rgb') || part.startsWith('hsl')) {
+                    config.color = part
+                } else if (['none', 'glow', 'trail', 'pulse', 'rainbow', 'spark'].includes(part)) {
+                    config.effect = part
+                } else if (['forward', 'backward', 'bidirectional'].includes(part)) {
+                    config.direction = part
+                } else if (!isNaN(parseFloat(part))) {
+                    const num = parseFloat(part)
+                    if (config.size === 8 && num >= 1 && num <= 50) config.size = num
+                    else if (config.rate === 2 && num >= 0.1 && num <= 20) config.rate = num
+                    else if (config.speed === 0.5 && num >= 0.01 && num <= 5) config.speed = num
+                    else if (num >= 1 && num <= 10) config.trailLength = num
+                }
+            }
+            return config
+        }
+
+        // 构建粒子字符串
+        function buildParticles(config) {
+            if (!config.enabled) return ''
+            const parts = []
+            if (config.color) parts.push(config.color)
+            parts.push(config.size, config.rate, config.speed, config.effect, config.direction)
+            if (config.effect === 'trail') parts.push(config.trailLength)
+            return parts.join(' ')
         }
 
         // 保存连线的原始属性
         function saveOriginalAttrs(connector) {
             if (!originalAttrs.has(connector.id)) {
+                const fromConn = parseConnection(connector.getAttribute('from'))
+                const toConn = parseConnection(connector.getAttribute('to'))
+                const anim = parseAnimation(connector.getAttribute('animation'))
+                const particles = parseParticles(connector.getAttribute('particles'))
+                
                 originalAttrs.set(connector.id, {
+                    from: connector.getAttribute('from') || '',
+                    to: connector.getAttribute('to') || '',
                     route: connector.getAttribute('route') || 'x-y',
                     color: connector.getAttribute('color') || '#00d4ff',
                     width: connector.getAttribute('width') || '2',
                     lineStyle: connector.getAttribute('line-style') || 'solid',
-                    cornerRadius: connector.getAttribute('corner-radius') || '8',
                     perpendicularLength: connector.getAttribute('perpendicular-length') || '0',
                     animation: connector.getAttribute('animation') || 'none',
-                    animateSpeed: connector.getAttribute('animate-speed') || '1',
-                    fromAnchor: connector.getAttribute('from-anchor') || 'top:mc',
-                    toAnchor: connector.getAttribute('to-anchor') || 'top:mc',
-                    // 粒子属性
-                    particles: connector.hasAttribute('particles'),
-                    particleColor: connector.getAttribute('particle-color') || '',
-                    particleSize: connector.getAttribute('particle-size') || '8',
-                    particleRate: connector.getAttribute('particle-rate') || '2',
-                    particleSpeed: connector.getAttribute('particle-speed') || '0.5',
-                    particleEffect: connector.getAttribute('particle-effect') || 'glow',
-                    particleDirection: connector.getAttribute('particle-direction') || 'forward',
-                    particleTrailLength: connector.getAttribute('particle-trail-length') || '3',
+                    particles: connector.getAttribute('particles') || '',
+                    // 解析后的值用于 UI 控件
+                    fromEntityId: fromConn.entityId,
+                    fromFace: fromConn.face,
+                    fromPosition: fromConn.position,
+                    toEntityId: toConn.entityId,
+                    toFace: toConn.face,
+                    toPosition: toConn.position,
+                    animType: anim.type,
+                    animSpeed: anim.speed,
+                    particleConfig: particles
                 })
             }
         }
 
-        // 解析 anchor 字符串
+        // 解析 anchor 字符串（兼容旧代码）
         function parseAnchor(anchor) {
             const [face, position] = (anchor || 'top:mc').split(':')
             return { face: face || 'top', position: position || 'mc' }
@@ -1035,39 +1108,42 @@
 
         // 从连线同步控件值
         function syncControlsFromConnector(connector) {
+            // 解析连接点
+            const fromConn = parseConnection(connector.getAttribute('from'))
+            const toConn = parseConnection(connector.getAttribute('to'))
+            const anim = parseAnimation(connector.getAttribute('animation'))
+            const particles = parseParticles(connector.getAttribute('particles'))
+
             routeSelect.value = connector.getAttribute('route') || 'x-y'
             colorInput.value = connector.getAttribute('color') || '#00d4ff'
             widthSlider.value = connector.getAttribute('width') || '2'
             styleSelect.value = connector.getAttribute('line-style') || 'solid'
-            radiusSlider.value = connector.getAttribute('corner-radius') || '8'
             perpSlider.value = connector.getAttribute('perpendicular-length') || '0'
-            animationSelect.value = connector.getAttribute('animation') || 'none'
-            speedSlider.value = connector.getAttribute('animate-speed') || '1'
+            
+            // 动画
+            animationSelect.value = anim.type
+            speedSlider.value = anim.speed
 
             // 粒子属性
-            particlesEnabled.checked = connector.hasAttribute('particles')
-            particleColorInput.value = connector.getAttribute('particle-color') || connector.getAttribute('color') || '#ffffff'
-            particleSizeSlider.value = connector.getAttribute('particle-size') || '8'
-            particleRateSlider.value = connector.getAttribute('particle-rate') || '2'
-            particleSpeedSlider.value = connector.getAttribute('particle-speed') || '0.5'
-            particleEffectSelect.value = connector.getAttribute('particle-effect') || 'glow'
-            particleDirectionSelect.value = connector.getAttribute('particle-direction') || 'forward'
-            particleTrailSlider.value = connector.getAttribute('particle-trail-length') || '3'
+            particlesEnabled.checked = particles.enabled
+            particleColorInput.value = particles.color || connector.getAttribute('color') || '#ffffff'
+            particleSizeSlider.value = particles.size
+            particleRateSlider.value = particles.rate
+            particleSpeedSlider.value = particles.speed
+            particleEffectSelect.value = particles.effect
+            particleDirectionSelect.value = particles.direction
+            particleTrailSlider.value = particles.trailLength
 
-            // 解析 anchor 并更新控件
-            const fromAnchor = parseAnchor(connector.getAttribute('from-anchor'))
-            const toAnchor = parseAnchor(connector.getAttribute('to-anchor'))
-
-            fromFaceSelect.value = fromAnchor.face
-            toFaceSelect.value = toAnchor.face
+            // 更新面和位置控件
+            fromFaceSelect.value = fromConn.face
+            toFaceSelect.value = toConn.face
 
             // 更新九宫格选中状态
-            updatePositionGrid(fromPositionGrid, fromAnchor.position)
-            updatePositionGrid(toPositionGrid, toAnchor.position)
+            updatePositionGrid(fromPositionGrid, fromConn.position)
+            updatePositionGrid(toPositionGrid, toConn.position)
 
             // 更新显示值
             widthValue.textContent = widthSlider.value
-            radiusValue.textContent = radiusSlider.value
             perpValue.textContent = perpSlider.value
             speedValue.textContent = speedSlider.value
             particleSizeValue.textContent = particleSizeSlider.value
@@ -1093,35 +1169,39 @@
         function updateSelectedConnector() {
             if (!selectedConnector) return
 
+            // 获取当前连接点的 entityId
+            const currentFrom = parseConnection(selectedConnector.getAttribute('from'))
+            const currentTo = parseConnection(selectedConnector.getAttribute('to'))
+
+            // 构建新的连接点字符串
+            const newFrom = buildConnection(currentFrom.entityId, fromFaceSelect.value, getGridPosition(fromPositionGrid))
+            const newTo = buildConnection(currentTo.entityId, toFaceSelect.value, getGridPosition(toPositionGrid))
+
+            selectedConnector.setAttribute('from', newFrom)
+            selectedConnector.setAttribute('to', newTo)
             selectedConnector.setAttribute('route', routeSelect.value)
             selectedConnector.setAttribute('color', colorInput.value)
             selectedConnector.setAttribute('width', widthSlider.value)
             selectedConnector.setAttribute('line-style', styleSelect.value)
-            selectedConnector.setAttribute('corner-radius', radiusSlider.value)
             selectedConnector.setAttribute('perpendicular-length', perpSlider.value)
-            selectedConnector.setAttribute('animation', animationSelect.value)
-            selectedConnector.setAttribute('animate-speed', speedSlider.value)
+            
+            // 动画
+            selectedConnector.setAttribute('animation', buildAnimation(animationSelect.value, parseFloat(speedSlider.value)))
 
             // 粒子属性
-            if (particlesEnabled.checked) {
-                selectedConnector.setAttribute('particles', '')
-            } else {
-                selectedConnector.removeAttribute('particles')
+            const particleConfig = {
+                enabled: particlesEnabled.checked,
+                color: particleColorInput.value,
+                size: parseFloat(particleSizeSlider.value),
+                rate: parseFloat(particleRateSlider.value),
+                speed: parseFloat(particleSpeedSlider.value),
+                effect: particleEffectSelect.value,
+                direction: particleDirectionSelect.value,
+                trailLength: parseFloat(particleTrailSlider.value)
             }
-            selectedConnector.setAttribute('particle-color', particleColorInput.value)
-            selectedConnector.setAttribute('particle-size', particleSizeSlider.value)
-            selectedConnector.setAttribute('particle-rate', particleRateSlider.value)
-            selectedConnector.setAttribute('particle-speed', particleSpeedSlider.value)
-            selectedConnector.setAttribute('particle-effect', particleEffectSelect.value)
-            selectedConnector.setAttribute('particle-direction', particleDirectionSelect.value)
-            selectedConnector.setAttribute('particle-trail-length', particleTrailSlider.value)
-
-            // 使用新的 anchor 格式
-            selectedConnector.setAttribute('from-anchor', buildAnchor(fromFaceSelect.value, getGridPosition(fromPositionGrid)))
-            selectedConnector.setAttribute('to-anchor', buildAnchor(toFaceSelect.value, getGridPosition(toPositionGrid)))
+            selectedConnector.setAttribute('particles', buildParticles(particleConfig))
 
             widthValue.textContent = widthSlider.value
-            radiusValue.textContent = radiusSlider.value
             perpValue.textContent = perpSlider.value
             speedValue.textContent = speedSlider.value
             particleSizeValue.textContent = particleSizeSlider.value
@@ -1144,30 +1224,15 @@
             const original = originalAttrs.get(selectedConnector.id)
             if (!original) return
 
+            selectedConnector.setAttribute('from', original.from)
+            selectedConnector.setAttribute('to', original.to)
             selectedConnector.setAttribute('route', original.route)
             selectedConnector.setAttribute('color', original.color)
             selectedConnector.setAttribute('width', original.width)
             selectedConnector.setAttribute('line-style', original.lineStyle)
-            selectedConnector.setAttribute('corner-radius', original.cornerRadius)
             selectedConnector.setAttribute('perpendicular-length', original.perpendicularLength)
             selectedConnector.setAttribute('animation', original.animation)
-            selectedConnector.setAttribute('animate-speed', original.animateSpeed)
-            selectedConnector.setAttribute('from-anchor', original.fromAnchor)
-            selectedConnector.setAttribute('to-anchor', original.toAnchor)
-
-            // 粒子属性重置
-            if (original.particles) {
-                selectedConnector.setAttribute('particles', '')
-            } else {
-                selectedConnector.removeAttribute('particles')
-            }
-            selectedConnector.setAttribute('particle-color', original.particleColor)
-            selectedConnector.setAttribute('particle-size', original.particleSize)
-            selectedConnector.setAttribute('particle-rate', original.particleRate)
-            selectedConnector.setAttribute('particle-speed', original.particleSpeed)
-            selectedConnector.setAttribute('particle-effect', original.particleEffect)
-            selectedConnector.setAttribute('particle-direction', original.particleDirection)
-            selectedConnector.setAttribute('particle-trail-length', original.particleTrailLength)
+            selectedConnector.setAttribute('particles', original.particles)
 
             syncControlsFromConnector(selectedConnector)
 
@@ -1198,7 +1263,6 @@
             colorInput.value = randomColor
             widthSlider.value = Math.floor(Math.random() * 6) + 1
             styleSelect.value = styles[Math.floor(Math.random() * styles.length)]
-            radiusSlider.value = Math.floor(Math.random() * 20)
             animationSelect.value = animations[Math.floor(Math.random() * animations.length)]
             speedSlider.value = (Math.random() * 2 + 0.2).toFixed(1)
             fromFaceSelect.value = faces[Math.floor(Math.random() * faces.length)]
@@ -1227,7 +1291,6 @@
         colorInput.addEventListener('input', updateSelectedConnector)
         widthSlider.addEventListener('input', updateSelectedConnector)
         styleSelect.addEventListener('change', updateSelectedConnector)
-        radiusSlider.addEventListener('input', updateSelectedConnector)
         perpSlider.addEventListener('input', updateSelectedConnector)
         animationSelect.addEventListener('change', updateSelectedConnector)
         speedSlider.addEventListener('input', updateSelectedConnector)

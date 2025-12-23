@@ -1863,133 +1863,100 @@
     <!-- 远端服务器1 到 主服务器 (拉流) -->
     <iso-connector 
       slot="connectors"
-      from="remote-server-1" to="main-shell" 
-      from-anchor="bottom:mr" to-anchor="bottom:tl"
+      from="remote-server-1@bottom:mr" to="main-shell@bottom:tl" 
       color="#667eea" width="2" 
       route="x-y" 
-      corner-radius="12"
-      animation="flow"
-      animate-speed="0.5">
+      animation="flow 0.5">
     </iso-connector>
 
     <!-- 远端服务器2 到 主服务器 (拉流) -->
     <iso-connector 
       slot="connectors"
-      from="remote-server-2" to="main-shell" 
-      from-anchor="bottom:mr" to-anchor="bottom:ml"
+      from="remote-server-2@bottom:mr" to="main-shell@bottom:ml" 
       color="#667eea" width="2" 
       route="x-y" 
-      corner-radius="12"
-      animation="flow"
-      animate-speed="0.6">
+      animation="flow 0.6">
     </iso-connector>
 
     <!-- NVR 到 主服务器 (推流) -->
     <iso-connector 
       slot="connectors"
-      from="nvr-device" to="main-shell" 
-      from-anchor="bottom:mr" to-anchor="bottom:ml"
+      from="nvr-device@bottom:mr" to="main-shell@bottom:ml" 
       color="#00d4ff" width="2" 
       route="direct" 
-      corner-radius="12"
-      animation="flow"
-      animate-speed="0.8">
+      animation="flow 0.8">
     </iso-connector>
 
     <!-- 主服务器 到 播放器1 -->
     <iso-connector 
       slot="connectors"
-      from="main-shell" to="player-1" 
-      from-anchor="bottom:bl" to-anchor="bottom:mr"
+      from="main-shell@bottom:bl" to="player-1@bottom:mr" 
       color="#2196F3" width="2" 
       route="x-y" 
-      corner-radius="12"
-      animation="flow"
-      animate-speed="0.7">
+      animation="flow 0.7">
     </iso-connector>
 
     <!-- 主服务器 到 播放器2 -->
     <iso-connector 
       slot="connectors"
-      from="main-shell" to="player-2" 
-      from-anchor="bottom:bl" to-anchor="bottom:tr"
+      from="main-shell@bottom:bl" to="player-2@bottom:tr" 
       color="#2196F3" width="2" 
       route="x-y" 
-      corner-radius="12"
-      animation="flow"
-      animate-speed="0.6">
+      animation="flow 0.6">
     </iso-connector>
 
     <!-- 主服务器 到 上级节点 -->
     <iso-connector 
       slot="connectors"
-      from="main-shell" to="upstream-server" 
-      from-anchor="bottom:tr" to-anchor="bottom:ml"
+      from="main-shell@bottom:tr" to="upstream-server@bottom:ml" 
       color="#9C27B0" width="2" 
       route="x-y" 
-      corner-radius="12"
-      animation="flow"
-      animate-speed="0.5">
+      animation="flow 0.5">
     </iso-connector>
 
     <!-- 主服务器 到 CDN -->
     <iso-connector 
       slot="connectors"
-      from="main-shell" to="cdn-server" 
-      from-anchor="bottom:mr" to-anchor="bottom:ml"
+      from="main-shell@bottom:mr" to="cdn-server@bottom:ml" 
       color="#E91E63" width="2" 
       route="x-y" 
-      corner-radius="12"
-      animation="flow"
-      animate-speed="0.7">
+      animation="flow 0.7">
     </iso-connector>
 
     <!-- 推流器 到 主服务器 -->
     <iso-connector 
       slot="connectors"
-      from="pusher-device" to="main-shell" 
-      from-anchor="bottom:ml" to-anchor="bottom:mr"
+      from="pusher-device@bottom:ml" to="main-shell@bottom:mr" 
       color="#00d4ff" width="2" 
       route="direct" 
-      corner-radius="12"
-      animation="flow"
-      animate-speed="0.8">
+      animation="flow 0.8">
     </iso-connector>
 
     <!-- 主服务器 到 存储 -->
     <iso-connector 
       slot="connectors"
-      from="main-shell" to="storage-1" 
-      from-anchor="bottom:br" to-anchor="bottom:ml"
+      from="main-shell@bottom:br" to="storage-1@bottom:ml" 
       color="#FF9800" width="2" 
       route="x-y" 
-      corner-radius="12"
-      animation="flow"
-      animate-speed="0.6">
+      animation="flow 0.6">
     </iso-connector>
 
     <!-- 主服务器 到 下级节点1 -->
     <iso-connector 
       slot="connectors"
-      from="main-shell" to="downstream-1" 
-      from-anchor="bottom:bc" to-anchor="bottom:tc"
+      from="main-shell@bottom:bc" to="downstream-1@bottom:tc" 
       color="#00BCD4" width="2" 
       route="y-x" 
-      corner-radius="12"
-      animation="flow"
-      animate-speed="0.5">
+      animation="flow 0.5">
     </iso-connector>
 
     <!-- 主服务器 到 下级节点2 -->
     <iso-connector 
       slot="connectors"
-      from="main-shell" to="downstream-2" 
-      from-anchor="bottom:bc" to-anchor="bottom:tc"
+      from="main-shell@bottom:bc" to="downstream-2@bottom:tc" 
       color="#00BCD4" width="2" 
       route="y-x" 
-      corner-radius="12"
-      animation="flow"
-      animate-speed="0.5">
+      animation="flow 0.5">
     </iso-connector>
 
   </iso-scene>

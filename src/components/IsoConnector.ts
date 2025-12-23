@@ -11,6 +11,10 @@ type PositionType = 'tl' | 'tc' | 'tr' | 'ml' | 'mc' | 'mr' | 'bl' | 'bc' | 'br'
 type RouteAxis = 'x' | 'y' | 'z'
 // 小球特效类型
 type ParticleEffect = 'none' | 'glow' | 'trail' | 'pulse' | 'rainbow' | 'spark'
+// 粒子方向类型
+type ParticleDirection = 'forward' | 'backward' | 'bidirectional'
+// 动画类型
+type AnimationType = 'none' | 'flow' | 'pulse' | 'glow'
 
 // 面的法向量（垂直于面向外的方向）
 const FACE_NORMALS: Record<FaceType, { x: number; y: number; z: number }> = {
@@ -37,22 +41,46 @@ interface Particle {
   createdAt: number
 }
 
+/** 解析后的粒子配置 */
+interface ParticleConfig {
+  enabled: boolean
+  color: string
+  size: number
+  rate: number
+  speed: number
+  effect: ParticleEffect
+  direction: ParticleDirection
+  trailLength: number
+}
+
+/** 解析后的动画配置 */
+interface AnimationConfig {
+  type: AnimationType
+  speed: number
+  color: string
+}
+
+/** 解析后的连接点配置 */
+interface ConnectionConfig {
+  entityId: string
+  face: FaceType
+  position: PositionType
+}
+
 /**
  * 等距连线 Web Component
  * 
  * 使用 3D 变换在等距空间中绘制连线，和实体一样由场景层统一做旋转变换
+ * 
+ * 属性格式：
+ * - from/to: "entityId" 或 "entityId@face:position"（如 "box1@bottom:mr"）
+ * - animation: "type" 或 "type speed" 或 "type speed color"（如 "flow 1.5 #ff0000"）
+ * - particles: "color size rate speed effect direction trail"（如 "#fff 8 2 0.5 glow forward 3"）
  */
 export class IsoConnector extends LitElement {
-  // 连接的实体 ID
+  // 连接配置：格式为 "entityId" 或 "entityId@face:position"
   @property({ type: String }) from = ''
   @property({ type: String }) to = ''
-
-  // 连接锚点：格式为 "face:position"，如 "top:mc"、"bottom:tl"
-  @property({ type: String, attribute: 'from-anchor' })
-  fromAnchor = 'top:mc'
-
-  @property({ type: String, attribute: 'to-anchor' })
-  toAnchor = 'top:mc'
 
   // 路由配置
   @property({ type: String }) route: string = 'auto'
@@ -61,12 +89,10 @@ export class IsoConnector extends LitElement {
   @property({ type: String }) color = '#00d4ff'
   @property({ type: Number }) width = 2
   @property({ type: String, attribute: 'line-style' }) lineStyle: 'solid' | 'dashed' | 'dotted' = 'solid'
-  @property({ type: Number, attribute: 'corner-radius' }) cornerRadius = 8
 
-  // 动效
-  @property({ type: String, attribute: 'animation' }) animationType: 'none' | 'flow' | 'pulse' | 'glow' = 'none'
-  @property({ type: Number, attribute: 'animate-speed' }) animateSpeed = 1
-  @property({ type: String, attribute: 'animate-color' }) animateColor = ''
+  // 动画配置：格式为 "type" 或 "type speed" 或 "type speed color"
+  // 如 "flow"、"pulse 2"、"glow 1.5 #ff0000"
+  @property({ type: String }) animation = 'none'
 
   // 垂直延伸距离（从连接点垂直于面向外延伸的距离）
   @property({ type: Number, attribute: 'perpendicular-length' }) perpendicularLength = 0
@@ -74,23 +100,10 @@ export class IsoConnector extends LitElement {
   // 选中状态（用于高亮，避免使用 filter 破坏 3D 变换）
   @property({ type: Boolean, reflect: true }) selected = false
 
-  // ========== 粒子（发光小球）属性 ==========
-  // 是否启用粒子
-  @property({ type: Boolean, attribute: 'particles' }) particlesEnabled = false
-  // 粒子颜色（默认使用连线颜色）
-  @property({ type: String, attribute: 'particle-color' }) particleColor = ''
-  // 粒子大小（直径，像素）
-  @property({ type: Number, attribute: 'particle-size' }) particleSize = 8
-  // 粒子发射频率（每秒发射数量）
-  @property({ type: Number, attribute: 'particle-rate' }) particleRate = 2
-  // 粒子移动速度（每秒移动的路径百分比，0.5 表示 2 秒走完全程）
-  @property({ type: Number, attribute: 'particle-speed' }) particleSpeed = 0.5
-  // 粒子特效
-  @property({ type: String, attribute: 'particle-effect' }) particleEffect: ParticleEffect = 'glow'
-  // 粒子方向：forward（从起点到终点）、backward（从终点到起点）、bidirectional（双向）
-  @property({ type: String, attribute: 'particle-direction' }) particleDirection: 'forward' | 'backward' | 'bidirectional' = 'forward'
-  // 拖尾长度（仅 trail 特效有效）
-  @property({ type: Number, attribute: 'particle-trail-length' }) particleTrailLength = 3
+  // 粒子配置：格式为 "color size rate speed effect direction trail"
+  // 如 "#ffffff 8 2 0.5 glow forward 3" 或简写 "8 2 0.5"（使用默认值）
+  // 设置为空字符串或 "none" 禁用粒子
+  @property({ type: String }) particles = ''
 
   // 内部状态
   @state() private _segments: LineSegment3D[] = []
@@ -109,31 +122,205 @@ export class IsoConnector extends LitElement {
   private _totalPathLength = 0
   private _lastFrameTime = 0
 
-  // 解析锚点字符串，返回 face 和 position
-  private _parseAnchor(anchor: string): { face: FaceType; position: PositionType } {
+  // 缓存解析结果
+  private _cachedFromConfig: ConnectionConfig | null = null
+  private _cachedToConfig: ConnectionConfig | null = null
+  private _cachedAnimationConfig: AnimationConfig | null = null
+  private _cachedParticleConfig: ParticleConfig | null = null
+  private _lastFrom = ''
+  private _lastTo = ''
+  private _lastAnimation = ''
+  private _lastParticles = ''
+
+  /**
+   * 解析连接点字符串
+   * 格式: "entityId" 或 "entityId@face:position"
+   */
+  private _parseConnection(value: string): ConnectionConfig {
+    const atIndex = value.indexOf('@')
+    if (atIndex === -1) {
+      return {
+        entityId: value,
+        face: 'top',
+        position: 'mc'
+      }
+    }
+    
+    const entityId = value.substring(0, atIndex)
+    const anchor = value.substring(atIndex + 1)
     const [face, position] = anchor.split(':')
+    
     return {
+      entityId,
       face: (face || 'top') as FaceType,
       position: (position || 'mc') as PositionType
     }
   }
 
-  // 获取解析后的 from 锚点
+  /**
+   * 解析动画字符串
+   * 格式: "type" 或 "type speed" 或 "type speed color"
+   */
+  private _parseAnimation(value: string): AnimationConfig {
+    const parts = value.trim().split(/\s+/)
+    const type = (parts[0] || 'none') as AnimationType
+    const speed = parts[1] ? parseFloat(parts[1]) : 1
+    const color = parts[2] || ''
+    
+    return { type, speed, color }
+  }
+
+  /**
+   * 解析粒子配置字符串
+   * 格式: "color size rate speed effect direction trail"
+   * 支持带单位的参数（顺序无关）：
+   * - size: 数字或带 px 后缀，如 "8" 或 "8px"
+   * - rate: 带 hz 后缀，如 "2hz"
+   * - speed: 带 ms 后缀（毫秒转秒），如 "500ms"
+   * - trail: 带 trail 后缀，如 "3trail"
+   * 
+   * 示例：
+   * - "#fff 8px 2hz 500ms glow forward 3trail"
+   * - "500ms 8px 2hz" (顺序无关)
+   * - "8 2 0.5" (无单位按顺序解析)
+   */
+  private _parseParticles(value: string): ParticleConfig {
+    const trimmed = value.trim()
+    if (!trimmed || trimmed === 'none') {
+      return {
+        enabled: false,
+        color: '',
+        size: 8,
+        rate: 2,
+        speed: 0.5,
+        effect: 'glow',
+        direction: 'forward',
+        trailLength: 3
+      }
+    }
+
+    const parts = trimmed.split(/\s+/)
+    const config: ParticleConfig = {
+      enabled: true,
+      color: '',
+      size: 8,
+      rate: 2,
+      speed: 0.5,
+      effect: 'glow',
+      direction: 'forward',
+      trailLength: 3
+    }
+
+    // 跟踪无单位数字的解析顺序
+    let bareNumberIndex = 0
+
+    for (const part of parts) {
+      const lowerPart = part.toLowerCase()
+
+      // 颜色（以 # 或 rgb/hsl 开头）
+      if (part.startsWith('#') || lowerPart.startsWith('rgb') || lowerPart.startsWith('hsl')) {
+        config.color = part
+      }
+      // 特效类型
+      else if (['none', 'glow', 'trail', 'pulse', 'rainbow', 'spark'].includes(lowerPart)) {
+        config.effect = lowerPart as ParticleEffect
+      }
+      // 方向
+      else if (['forward', 'backward', 'bidirectional'].includes(lowerPart)) {
+        config.direction = lowerPart as ParticleDirection
+      }
+      // size: 带 px 后缀
+      else if (lowerPart.endsWith('px')) {
+        const num = parseFloat(lowerPart)
+        if (!isNaN(num)) config.size = num
+      }
+      // rate: 带 hz 后缀
+      else if (lowerPart.endsWith('hz')) {
+        const num = parseFloat(lowerPart)
+        if (!isNaN(num)) config.rate = num
+      }
+      // speed: 带 ms 后缀（毫秒转秒）
+      else if (lowerPart.endsWith('ms')) {
+        const num = parseFloat(lowerPart)
+        if (!isNaN(num)) config.speed = num / 1000
+      }
+      // speed: 带 s 后缀（秒）
+      else if (lowerPart.endsWith('s') && !lowerPart.endsWith('ms')) {
+        const num = parseFloat(lowerPart)
+        if (!isNaN(num)) config.speed = num
+      }
+      // trail: 带 trail 后缀
+      else if (lowerPart.endsWith('trail')) {
+        const num = parseFloat(lowerPart)
+        if (!isNaN(num)) config.trailLength = num
+      }
+      // 无单位数字：按顺序解析为 size, rate, speed, trailLength
+      else if (!isNaN(parseFloat(part))) {
+        const num = parseFloat(part)
+        switch (bareNumberIndex) {
+          case 0: config.size = num; break
+          case 1: config.rate = num; break
+          case 2: config.speed = num; break
+          case 3: config.trailLength = num; break
+        }
+        bareNumberIndex++
+      }
+    }
+
+    return config
+  }
+
+  // 获取解析后的 from 配置
+  get fromConfig(): ConnectionConfig {
+    if (this._lastFrom !== this.from || !this._cachedFromConfig) {
+      this._cachedFromConfig = this._parseConnection(this.from)
+      this._lastFrom = this.from
+    }
+    return this._cachedFromConfig
+  }
+
+  // 获取解析后的 to 配置
+  get toConfig(): ConnectionConfig {
+    if (this._lastTo !== this.to || !this._cachedToConfig) {
+      this._cachedToConfig = this._parseConnection(this.to)
+      this._lastTo = this.to
+    }
+    return this._cachedToConfig
+  }
+
+  // 获取解析后的动画配置
+  get animationConfig(): AnimationConfig {
+    if (this._lastAnimation !== this.animation || !this._cachedAnimationConfig) {
+      this._cachedAnimationConfig = this._parseAnimation(this.animation)
+      this._lastAnimation = this.animation
+    }
+    return this._cachedAnimationConfig
+  }
+
+  // 获取解析后的粒子配置
+  get particleConfig(): ParticleConfig {
+    if (this._lastParticles !== this.particles || !this._cachedParticleConfig) {
+      this._cachedParticleConfig = this._parseParticles(this.particles)
+      this._lastParticles = this.particles
+    }
+    return this._cachedParticleConfig
+  }
+
+  // 兼容旧 API 的 getter
   get fromFace(): FaceType {
-    return this._parseAnchor(this.fromAnchor).face
+    return this.fromConfig.face
   }
 
   get fromPosition(): PositionType {
-    return this._parseAnchor(this.fromAnchor).position
+    return this.fromConfig.position
   }
 
-  // 获取解析后的 to 锚点
   get toFace(): FaceType {
-    return this._parseAnchor(this.toAnchor).face
+    return this.toConfig.face
   }
 
   get toPosition(): PositionType {
-    return this._parseAnchor(this.toAnchor).position
+    return this.toConfig.position
   }
 
   static styles = css`
@@ -356,12 +543,15 @@ export class IsoConnector extends LitElement {
     }
     if (!this._scene) return
 
-    if (this.from) {
-      this._fromEntity = this._scene.querySelector(`iso-cube[entity-id="${this.from}"]`) as IsoEntity
+    const fromId = this.fromConfig.entityId
+    const toId = this.toConfig.entityId
+
+    if (fromId) {
+      this._fromEntity = this._scene.querySelector(`iso-cube[entity-id="${fromId}"]`) as IsoEntity
     }
 
-    if (this.to) {
-      this._toEntity = this._scene.querySelector(`iso-cube[entity-id="${this.to}"]`) as IsoEntity
+    if (toId) {
+      this._toEntity = this._scene.querySelector(`iso-cube[entity-id="${toId}"]`) as IsoEntity
     }
   }
 
@@ -372,24 +562,22 @@ export class IsoConnector extends LitElement {
     }
 
     // 任何路径相关属性变化都需要重新计算
-    const pathProps = ['from', 'to', 'fromAnchor', 'toAnchor', 'route', 'cornerRadius', 'perpendicularLength']
+    const pathProps = ['from', 'to', 'route', 'perpendicularLength']
     if (pathProps.some(prop => changedProperties.has(prop))) {
       this._updatePath()
     }
 
-    // 粒子启用/禁用变化
-    if (changedProperties.has('particlesEnabled')) {
-      if (this.particlesEnabled) {
+    // 粒子配置变化
+    if (changedProperties.has('particles')) {
+      const config = this.particleConfig
+      if (config.enabled) {
         this._startParticleAnimation()
       } else {
         this._stopParticleAnimation()
         this._particles = []
         this._reverseParticles = []
       }
-    }
-
-    // 粒子方向变化时，清除现有粒子重新开始
-    if (changedProperties.has('particleDirection') && this.particlesEnabled) {
+      // 方向变化时清除现有粒子
       this._particles = []
       this._reverseParticles = []
       this._lastEmitTime = 0
@@ -533,7 +721,7 @@ export class IsoConnector extends LitElement {
    */
   private _startParticleAnimation() {
     if (this._animationFrameId !== null) return
-    if (!this.particlesEnabled) return
+    if (!this.particleConfig.enabled) return
 
     this._lastFrameTime = 0
     const animate = (timestamp: number) => {
@@ -557,7 +745,8 @@ export class IsoConnector extends LitElement {
    * 更新粒子状态
    */
   private _updateParticles(timestamp: number) {
-    if (!this.particlesEnabled || this._totalPathLength === 0) return
+    const config = this.particleConfig
+    if (!config.enabled || this._totalPathLength === 0) return
 
     // 计算真实的 deltaTime
     if (this._lastFrameTime === 0) {
@@ -566,10 +755,10 @@ export class IsoConnector extends LitElement {
     const deltaTime = (timestamp - this._lastFrameTime) / 1000 // 转换为秒
     this._lastFrameTime = timestamp
 
-    const emitInterval = 1000 / this.particleRate // 发射间隔（毫秒）
+    const emitInterval = 1000 / config.rate // 发射间隔（毫秒）
 
     // 正向粒子发射
-    if (this.particleDirection === 'forward' || this.particleDirection === 'bidirectional') {
+    if (config.direction === 'forward' || config.direction === 'bidirectional') {
       if (timestamp - this._lastEmitTime >= emitInterval) {
         this._particles.push({
           id: this._particleIdCounter++,
@@ -581,7 +770,7 @@ export class IsoConnector extends LitElement {
     }
 
     // 反向粒子发射（双向模式）
-    if (this.particleDirection === 'backward' || this.particleDirection === 'bidirectional') {
+    if (config.direction === 'backward' || config.direction === 'bidirectional') {
       if (timestamp - this._lastReverseEmitTime >= emitInterval) {
         this._reverseParticles.push({
           id: this._particleIdCounter++,
@@ -596,7 +785,7 @@ export class IsoConnector extends LitElement {
     this._particles = this._particles
       .map(p => ({
         ...p,
-        progress: p.progress + this.particleSpeed * deltaTime
+        progress: p.progress + config.speed * deltaTime
       }))
       .filter(p => p.progress <= 1)
 
@@ -604,7 +793,7 @@ export class IsoConnector extends LitElement {
     this._reverseParticles = this._reverseParticles
       .map(p => ({
         ...p,
-        progress: p.progress - this.particleSpeed * deltaTime
+        progress: p.progress - config.speed * deltaTime
       }))
       .filter(p => p.progress >= 0)
 
@@ -652,24 +841,25 @@ export class IsoConnector extends LitElement {
    * 渲染单个粒子
    */
   private _renderParticle(particle: Particle, isReverse: boolean = false) {
+    const config = this.particleConfig
     const pos = this._getPositionAtProgress(particle.progress)
-    const color = this.particleColor || this.color
-    const size = this.particleSize
+    const color = config.color || this.color
+    const size = config.size
     const halfSize = size / 2
 
     // 根据特效类型决定颜色
     let particleColorFinal = color
-    if (this.particleEffect === 'rainbow') {
+    if (config.effect === 'rainbow') {
       particleColorFinal = this._getRainbowColor(particle.progress)
     }
 
     // 拖尾特效需要特殊处理
-    if (this.particleEffect === 'trail') {
+    if (config.effect === 'trail') {
       return this._renderTrailParticle(particle, isReverse)
     }
 
-    const effectClass = this.particleEffect !== 'none'
-      ? `effect-${this.particleEffect}`
+    const effectClass = config.effect !== 'none'
+      ? `effect-${config.effect}`
       : ''
 
     return html`
@@ -695,9 +885,10 @@ export class IsoConnector extends LitElement {
    * 渲染带拖尾的粒子
    */
   private _renderTrailParticle(particle: Particle, isReverse: boolean) {
-    const color = this.particleColor || this.color
-    const size = this.particleSize
-    const trailCount = this.particleTrailLength
+    const config = this.particleConfig
+    const color = config.color || this.color
+    const size = config.size
+    const trailCount = config.trailLength
     const trailStep = 0.03 // 每个拖尾点的进度间隔
 
     const trails = []
@@ -712,7 +903,7 @@ export class IsoConnector extends LitElement {
       const halfSize = trailSize / 2
 
       let trailColor = color
-      if (this.particleEffect === 'rainbow') {
+      if (config.effect === 'rainbow') {
         trailColor = this._getRainbowColor(trailProgress)
       }
 
@@ -786,6 +977,7 @@ export class IsoConnector extends LitElement {
   }
 
   private _getLineStyle(): string {
+    const animConfig = this.animationConfig
     const baseStyle = `
       width: var(--line-length);
       height: ${this.width}px;
@@ -816,7 +1008,7 @@ export class IsoConnector extends LitElement {
     }
 
     // flow 动画使用虚线背景
-    if (this.animationType === 'flow') {
+    if (animConfig.type === 'flow') {
       return baseStyle + `
         background: repeating-linear-gradient(
           90deg,
@@ -833,7 +1025,7 @@ export class IsoConnector extends LitElement {
   }
 
   private _getAnimationClass(): string {
-    switch (this.animationType) {
+    switch (this.animationConfig.type) {
       case 'flow': return 'animate-flow'
       case 'pulse': return 'animate-pulse'
       case 'glow': return 'animate-glow glow'
@@ -842,8 +1034,10 @@ export class IsoConnector extends LitElement {
   }
 
   render() {
+    const animConfig = this.animationConfig
+    const particleConfig = this.particleConfig
     const animClass = this._getAnimationClass()
-    const glowColor = this.animateColor || this.color
+    const glowColor = animConfig.color || this.color
     const selectedClass = this.selected ? 'selected' : ''
 
     // 直接从实体获取连接点坐标（而不是从 segments）
@@ -861,7 +1055,7 @@ export class IsoConnector extends LitElement {
             style="
               ${this._getLineStyle()}
               --line-length: ${segment.length}px;
-              --animate-speed: ${this.animateSpeed};
+              --animate-speed: ${animConfig.speed};
               --glow-color: ${glowColor};
             "
           ></div>
@@ -885,7 +1079,7 @@ export class IsoConnector extends LitElement {
       ` : ''}
 
       <!-- 粒子（发光小球） -->
-      ${this.particlesEnabled ? html`
+      ${particleConfig.enabled ? html`
         ${this._particles.map(p => this._renderParticle(p, false))}
         ${this._reverseParticles.map(p => this._renderParticle(p, true))}
       ` : ''}
