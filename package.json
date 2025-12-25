@@ -1,6 +1,6 @@
 {
   "name": "iso-engine",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A lightweight 2.5D isometric view engine based on CSS 3D Transform",
   "type": "module",
   "main": "./dist/isometric-engine.umd.cjs",

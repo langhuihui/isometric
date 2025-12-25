@@ -9,56 +9,57 @@ export class IsoCube extends IsoEntity {
   static styles = [
     IsoEntity.baseStyles,
     css`
-      .cube {
-        position: absolute;
-        transform-style: preserve-3d;
-        pointer-events: none;
+      /* 顶面：水平放置在 Z=depth 高度 */
+      .face-top {
+        width: var(--entity-width);
+        height: var(--entity-height);
+        background: var(--entity-top-color, #4CAF50);
+        transform: translateZ(var(--entity-depth));
+      }
+
+      /* 前面：立在顶面前边缘 */
+      .face-front {
+        width: var(--entity-width);
+        height: var(--entity-depth);
+        background: var(--entity-front-color, #388E3C);
+        transform: 
+          rotateX(-90deg)
+          translateY(calc(0px - var(--entity-depth) / 2))
+          translateZ(calc(var(--entity-height) - var(--entity-depth) / 2));
+      }
+
+      /* 右面：立在顶面右边缘 */
+      .face-right {
+        width: var(--entity-height);
+        height: var(--entity-depth);
+        background: var(--entity-right-color, #2E7D32);
+        transform: 
+          rotateY(90deg)
+          rotateZ(-90deg)
+          translateZ(calc(var(--entity-width) - var(--entity-height) / 2))
+          translateY(calc(0px - var(--entity-depth) / 2))
+          translateX(calc(var(--entity-depth) / 2 - var(--entity-height) / 2));
       }
     `
   ]
 
   render() {
-    const { width: w, height: h, depth: d } = this
-
     return html`
-      <div class="cube shape" style="
-        width: ${w}px;
-        height: ${h}px;
-        transform: translate(-50%, -50%);
-      ">
         <!-- 顶面 -->
-        <div class="face face-top" style="
-          width: ${w}px;
-          height: ${h}px;
-          background: ${this.topColor};
-          transform: translateZ(${d}px);
-        ">
+        <div class="face face-top">
           <slot name="top"></slot>
         </div>
-        
+
         <!-- 前面 -->
-        <div class="face face-front" style="
-          width: ${w}px;
-          height: ${d}px;
-          background: ${this.frontColor};
-          transform-origin: left top;
-          transform: translateY(${h}px) rotateX(90deg);
-        ">
+        <div class="face face-front">
           <slot name="front"></slot>
         </div>
-        
+
         <!-- 右面 -->
-        <div class="face face-right" style="
-          width: ${h}px;
-          height: ${d}px;
-          background: ${this.rightColor};
-          transform-origin: left top;
-          transform: translateX(${w}px) translateY(${h}px) rotateX(90deg) rotateY(-90deg);
-        ">
+        <div class="face face-right">
           <slot name="right"></slot>
           <div class="shadow-overlay"></div>
         </div>
-      </div>
     `
   }
 }

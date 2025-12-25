@@ -8,6 +8,17 @@ export type FaceType = 'top' | 'bottom' | 'front' | 'back' | 'left' | 'right'
 // 面上的位置类型
 export type PositionType = 'tl' | 'tc' | 'tr' | 'ml' | 'mc' | 'mr' | 'bl' | 'bc' | 'br'
 
+/**
+ * 安全地将值转换为数字
+ * @param value 要转换的值
+ * @param defaultValue 默认值
+ * @returns 转换后的数字，如果转换失败则返回默认值
+ */
+export function safeNumber(value: unknown, defaultValue: number = 0): number {
+  const num = Number(value)
+  return isNaN(num) ? defaultValue : num
+}
+
 // 位置在面上的相对坐标 (0-1)
 const POSITION_MAP: Record<PositionType, { u: number; v: number }> = {
   tl: { u: 0, v: 0 },
@@ -80,19 +91,12 @@ export abstract class IsoEntity extends LitElement {
       pointer-events: none !important;
     }
 
-    .shape {
-      position: absolute;
-      transform-style: preserve-3d;
-      pointer-events: none;
-    }
-
     .face {
       position: absolute;
-      backface-visibility: visible;
+      backface-visibility: hidden;
       box-sizing: border-box;
       pointer-events: auto;
       overflow: hidden;
-      border: 1px solid #000;
     }
 
     .face ::slotted(*) {
@@ -101,14 +105,6 @@ export abstract class IsoEntity extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-    }
-
-    .face-front ::slotted(*) {
-      transform: scaleY(-1);
-    }
-
-    .face-right ::slotted(*) {
-      transform: scaleY(-1);
     }
 
     .shadow-overlay {
@@ -125,10 +121,28 @@ export abstract class IsoEntity extends LitElement {
   connectedCallback() {
     super.connectedCallback()
     this._scene = this.closest('iso-scene')
+    // 初始化 CSS 变量，子类可直接使用
+    this.style.setProperty('--entity-width', `${safeNumber(this.width, 100)}px`)
+    this.style.setProperty('--entity-height', `${safeNumber(this.height, 100)}px`)
+    this.style.setProperty('--entity-depth', `${safeNumber(this.depth, 50)}px`)
+    this.style.setProperty('--entity-top-color', this.topColor)
+    this.style.setProperty('--entity-front-color', this.frontColor)
+    this.style.setProperty('--entity-right-color', this.rightColor)
     this.updatePosition()
   }
 
   updated(changedProperties: Map<string, unknown>) {
+    // 更新位置相关的 CSS 变量，子类可直接使用
+    if (changedProperties.has('width')) {
+      this.style.setProperty('--entity-width', `${safeNumber(this.width, 100)}px`)
+    }
+    if (changedProperties.has('height')) {
+      this.style.setProperty('--entity-height', `${safeNumber(this.height, 100)}px`)
+    }
+    if (changedProperties.has('depth')) {
+      this.style.setProperty('--entity-depth', `${safeNumber(this.depth, 50)}px`)
+    }
+
     if (changedProperties.has('x') || changedProperties.has('y') || changedProperties.has('z') ||
         changedProperties.has('width') || changedProperties.has('height') ||
         changedProperties.has('row') || changedProperties.has('col') || changedProperties.has('gridSize')) {
@@ -140,17 +154,25 @@ export abstract class IsoEntity extends LitElement {
    * 更新位置
    */
   updatePosition() {
-    let isoX = this.x
-    let isoY = this.y
-    
-    if (this.row !== null && this.col !== null) {
-      isoX = this.row * this.gridSize - this.col * this.gridSize
-      isoY = this.row * this.gridSize + this.col * this.gridSize
+    // 确保所有值都是数字类型
+    const x = safeNumber(this.x, 0) - (this.width / 2)
+    const y = safeNumber(this.y, 0) - (this.height / 2)
+    const z = safeNumber(this.z, 0)
+
+    // 对于 row 和 col，如果值是 null 或 NaN，则视为未设置
+    const row = this.row === null || Number.isNaN(Number(this.row)) ? null : safeNumber(this.row, 0)
+    const col = this.col === null || Number.isNaN(Number(this.col)) ? null : safeNumber(this.col, 0)
+    const gridSize = safeNumber(this.gridSize, 30)
+
+    let isoX = x
+    let isoY = y
+
+    if (row !== null && col !== null) {
+      isoX = row * gridSize - col * gridSize
+      isoY = row * gridSize + col * gridSize
     }
-    
-    this.style.left = '0'
-    this.style.top = '0'
-    this.style.transform = `translate3d(${isoX}px, ${isoY}px, ${this.z}px)`
+
+    this.style.transform = `translate3d(${isoX}px, ${isoY}px, ${z}px) `
   }
 
   /**
@@ -176,45 +198,53 @@ export abstract class IsoEntity extends LitElement {
     const { width: w, height: h, depth: d } = this
     const { u, v } = POSITION_MAP[position] || POSITION_MAP.mc
 
+    // 确保所有值都是数字
+    const width = safeNumber(w, 100)
+    const height = safeNumber(h, 100)
+    const depth = safeNumber(d, 50)
+    const x = safeNumber(this.x, 0)
+    const y = safeNumber(this.y, 0)
+    const z = safeNumber(this.z, 0)
+
     let dx = 0, dy = 0, dz = 0
 
     switch (face) {
       case 'top':
-        dx = w * (u - 0.5)
-        dy = h * (v - 0.5)
-        dz = d
+        dx = width * (u - 0.5)
+        dy = height * (v - 0.5)
+        dz = depth
         break
       case 'bottom':
-        dx = w * (u - 0.5)
-        dy = h * (v - 0.5)
+        dx = width * (u - 0.5)
+        dy = height * (v - 0.5)
         dz = 0
         break
       case 'front':
-        dx = w * (u - 0.5)
-        dy = h / 2
-        dz = d * (1 - v)
+        dx = width * (u - 0.5)
+        dy = height / 2
+        dz = depth * (1 - v)
         break
       case 'back':
-        dx = w * (u - 0.5)
-        dy = -h / 2
-        dz = d * (1 - v)
+        dx = width * (u - 0.5)
+        dy = -height / 2
+        dz = depth * (1 - v)
         break
       case 'left':
-        dx = -w / 2
-        dy = h * (u - 0.5)
-        dz = d * (1 - v)
+        dx = -width / 2
+        dy = height * (u - 0.5)
+        dz = depth * (1 - v)
         break
       case 'right':
-        dx = w / 2
-        dy = h * (u - 0.5)
-        dz = d * (1 - v)
+        dx = width / 2
+        dy = height * (u - 0.5)
+        dz = depth * (1 - v)
         break
     }
 
     return {
-      x: this.x + dx,
-      y: this.y + dy,
-      z: this.z + dz
+      x: x + dx,
+      y: y + dy,
+      z: z + dz
     }
   }
 
@@ -228,50 +258,58 @@ export abstract class IsoEntity extends LitElement {
     const { width: w, height: h, depth: d } = this
     const { u, v } = POSITION_MAP[position] || POSITION_MAP.mc
 
+    // 确保所有值都是数字
+    const width = safeNumber(w, 100)
+    const height = safeNumber(h, 100)
+    const depth = safeNumber(d, 50)
+    const x = safeNumber(this.x, 0)
+    const y = safeNumber(this.y, 0)
+    const z = safeNumber(this.z, 0)
+
     let dx = 0, dy = 0, dz = 0
 
     switch (face) {
       case 'top':
-        dx = w * (u - 0.5)
-        dy = h * (v - 0.5)
-        dz = d
+        dx = width * (u - 0.5)
+        dy = height * (v - 0.5)
+        dz = depth
         break
       case 'bottom':
-        dx = w * (u - 0.5)
-        dy = h * (v - 0.5)
+        dx = width * (u - 0.5)
+        dy = height * (v - 0.5)
         dz = 0
         break
       case 'front':
-        dx = w * (u - 0.5)
-        dy = h / 2
-        dz = d * (1 - v)
+        dx = width * (u - 0.5)
+        dy = height / 2
+        dz = depth * (1 - v)
         break
       case 'back':
-        dx = w * (u - 0.5)
-        dy = -h / 2
-        dz = d * (1 - v)
+        dx = width * (u - 0.5)
+        dy = -height / 2
+        dz = depth * (1 - v)
         break
       case 'left':
-        dx = -w / 2
-        dy = h * (u - 0.5)
-        dz = d * (1 - v)
+        dx = -width / 2
+        dy = height * (u - 0.5)
+        dz = depth * (1 - v)
         break
       case 'right':
-        dx = w / 2
-        dy = h * (u - 0.5)
-        dz = d * (1 - v)
+        dx = width / 2
+        dy = height * (u - 0.5)
+        dz = depth * (1 - v)
         break
     }
 
-    const entityScreen = isoToScreen({ x: this.x, y: this.y, z: this.z })
+    const entityScreen = isoToScreen({ x, y, z })
     const { cosZ, sinZ, cosX, sinX } = getTrigValues()
     const screenDx = cosZ * dx - cosZ * dy
     const screenDy = sinZ * cosX * dx + sinZ * cosX * dy - sinX * dz
 
     const isoPoint = {
-      x: this.x + dx,
-      y: this.y + dy,
-      z: this.z + dz
+      x: x + dx,
+      y: y + dy,
+      z: z + dz
     }
 
     return {

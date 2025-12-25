@@ -169,14 +169,14 @@ export class IsoScene extends LitElement {
    * 获取所有实体
    */
   getEntities(): IsoEntity[] {
-    return Array.from(this.querySelectorAll('iso-cube'))
+    return Array.from(this.querySelectorAll('[entity-id]'))
   }
 
   /**
    * 根据 ID 获取实体
    */
   getEntityById(id: string): IsoEntity | null {
-    return this.querySelector(`iso-cube[entity-id="${id}"]`)
+    return this.querySelector(`[entity-id="${id}"]`)
   }
 
   /**
@@ -191,12 +191,18 @@ export class IsoScene extends LitElement {
     // left/top 必须在这里设置，否则 Lit 重新渲染时会丢失
     // 连线也放在 .origin 内，让它们一起参与 3D 变换
     const { x, y } = this._originPosition
+
+    // 确保所有值都是数字
+    const width = Number(this.width) || 800
+    const height = Number(this.height) || 500
+    const perspective = Number(this._perspective) || 0
+
     // 透视：0 表示无透视（正交），>0 表示透视距离
-    const perspectiveStyle = this._perspective > 0
-      ? `perspective: ${this._perspective}px; perspective-origin: ${x}px ${y}px;`
+    const perspectiveStyle = perspective > 0
+      ? `perspective: ${perspective}px; perspective-origin: ${x}px ${y}px;`
       : ''
     return html`
-      <div class="scene-container" style="width: ${this.width}px; height: ${this.height}px; ${perspectiveStyle}">
+      <div class="scene-container" style="width: ${width}px; height: ${height}px; ${perspectiveStyle}">
         <div class="origin" style="left: ${x}px; top: ${y}px; transform: rotateX(${this._rotateX}deg) rotateZ(${this._rotateZ}deg);">
           <div class="connectors-layer">
             <slot name="connectors"></slot>

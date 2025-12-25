@@ -17,7 +17,7 @@ export { PathCalculator } from './components/PathCalculator'
 export { IsoEntity, type FaceType, type PositionType } from './components/IsoEntity'
 export { IsoCube } from './components/IsoCube'
 export { IsoPlane } from './components/IsoPlane'
-export { IsoConsole } from './components/IsoConsole'
+export { IsoConsoleFront, IsoConsoleRight } from './components/IsoConsole'
 export { IsoConnector } from './components/IsoConnector'
 export { IsoScene } from './components/IsoScene'
 

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IsoCube 调试</title>
+  <script type="module" src="./src/components/IsoCube.ts"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #1a1a2e;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #fff;
+      margin-bottom: 20px;
+    }
+
+    .controls {
+      background: #16213e;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    label {
+      color: #fff;
+      font-size: 14px;
+    }
+
+    input[type="range"] {
+      width: 150px;
+    }
+
+    .value {
+      color: #4CAF50;
+      font-size: 12px;
+    }
+
+    .scene-container {
+      width: 600px;
+      height: 400px;
+      background: #0f0f23;
+      border: 2px solid #333;
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 简化的场景样式 */
+    .scene {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      perspective: 1000px;
+    }
+
+    .scene-inner {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform-style: preserve-3d;
+      /* 等距视角：rotateX(60deg) rotateZ(45deg) */
+      transform: rotateX(60deg) rotateZ(45deg);
+    }
+
+    .info {
+      margin-top: 20px;
+      color: #888;
+      font-size: 14px;
+    }
+
+    /* slot 内容样式 */
+    .face-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      color: white;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>IsoCube 3D 变换调试</h1>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>Width: <span class="value" id="wVal">100</span>px</label>
+      <input type="range" id="width" min="20" max="200" value="100">
+    </div>
+    <div class="control-group">
+      <label>Height: <span class="value" id="hVal">100</span>px</label>
+      <input type="range" id="height" min="20" max="200" value="100">
+    </div>
+    <div class="control-group">
+      <label>Depth: <span class="value" id="dVal">50</span>px</label>
+      <input type="range" id="depth" min="20" max="200" value="50">
+    </div>
+    <div class="control-group">
+      <label>RotateX: <span class="value" id="rxVal">60</span>°</label>
+      <input type="range" id="rotateX" min="0" max="90" value="60">
+    </div>
+    <div class="control-group">
+      <label>RotateZ: <span class="value" id="rzVal">45</span>°</label>
+      <input type="range" id="rotateZ" min="0" max="90" value="45">
+    </div>
+  </div>
+
+  <div class="scene-container">
+    <div class="scene">
+      <div class="scene-inner" id="sceneInner">
+        <iso-cube id="cube" width="100" height="100" depth="50">
+          <div slot="top" class="face-content">顶</div>
+          <div slot="front" class="face-content">前</div>
+          <div slot="right" class="face-content">右</div>
+        </iso-cube>
+      </div>
+    </div>
+  </div>
+
+  <div class="info">
+    <p>调整参数观察立方体变化。等距视角默认 rotateX(60°) rotateZ(45°)</p>
+  </div>
+
+  <script>
+    const cube = document.getElementById('cube')
+    const sceneInner = document.getElementById('sceneInner')
+
+    const inputs = {
+      width: document.getElementById('width'),
+      height: document.getElementById('height'),
+      depth: document.getElementById('depth'),
+      rotateX: document.getElementById('rotateX'),
+      rotateZ: document.getElementById('rotateZ')
+    }
+
+    const values = {
+      wVal: document.getElementById('wVal'),
+      hVal: document.getElementById('hVal'),
+      dVal: document.getElementById('dVal'),
+      rxVal: document.getElementById('rxVal'),
+      rzVal: document.getElementById('rzVal')
+    }
+
+    function update() {
+      const w = inputs.width.value
+      const h = inputs.height.value
+      const d = inputs.depth.value
+      const rx = inputs.rotateX.value
+      const rz = inputs.rotateZ.value
+
+      values.wVal.textContent = w
+      values.hVal.textContent = h
+      values.dVal.textContent = d
+      values.rxVal.textContent = rx
+      values.rzVal.textContent = rz
+
+      cube.setAttribute('width', w)
+      cube.setAttribute('height', h)
+      cube.setAttribute('depth', d)
+
+      sceneInner.style.transform = `rotateX(${rx}deg) rotateZ(${rz}deg)`
+    }
+
+    Object.values(inputs).forEach(input => {
+      input.addEventListener('input', update)
+    })
+
+    update()
+  </script>
+</body>
+</html>

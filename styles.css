@@ -1,0 +1,1241 @@
+/* ========== 基础样式 ========== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.header {
+  color: #fff;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.header .badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.header .tip {
+  color: #888;
+  font-size: 12px;
+}
+
+iso-scene {
+  display: block;
+  background: rgba(255,255,255,0.02);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* ========== 浮动提示样式 ========== */
+.tooltip-trigger {
+  position: relative;
+  cursor: help;
+}
+
+.tooltip-trigger .tooltip {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.95);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  max-width: 220px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  z-index: 999999;
+  pointer-events: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tooltip-trigger .tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.95);
+}
+
+.tooltip-trigger:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ========== 详细信息浮动框样式 - 毛玻璃效果 ========== */
+.info-popup {
+  position: fixed;
+  background: linear-gradient(135deg, rgba(30, 30, 60, 0.75) 0%, rgba(20, 20, 50, 0.8) 100%);
+  color: #fff;
+  padding: 18px 22px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.8;
+  min-width: 280px;
+  max-width: 340px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 999999;
+  pointer-events: none;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 60px rgba(102, 126, 234, 0.15);
+  backdrop-filter: blur(4px) saturate(180%);
+  -webkit-backdrop-filter: blur(4px) saturate(180%);
+  transform: translateY(10px) scale(0.98);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.info-popup::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.info-popup.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+.info-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  position: relative;
+}
+
+.info-popup-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.info-popup-icon.cpu {
+  background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
+}
+
+.info-popup-icon.memory {
+  background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+}
+
+.info-popup-icon.network {
+  background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+  box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
+}
+
+.info-popup-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
+.info-popup-subtitle {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 3px;
+}
+
+.info-popup-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+}
+
+.info-popup-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+
+.info-popup-value {
+  color: #fff;
+  font-family: 'Monaco', 'Menlo', 'SF Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.info-popup-value.highlight {
+  color: #00d4ff;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.6), 0 0 20px rgba(0, 212, 255, 0.3);
+}
+
+.info-popup-value.success {
+  color: #4CAF50;
+  text-shadow: 0 0 10px rgba(76, 175, 80, 0.6), 0 0 20px rgba(76, 175, 80, 0.3);
+}
+
+.info-popup-value.warning {
+  color: #FFB74D;
+  text-shadow: 0 0 10px rgba(255, 183, 77, 0.6), 0 0 20px rgba(255, 183, 77, 0.3);
+}
+
+.info-popup-value.danger {
+  color: #ff6b6b;
+  text-shadow: 0 0 10px rgba(255, 107, 107, 0.6), 0 0 20px rgba(255, 107, 107, 0.3);
+}
+
+.info-popup-value.glow-cyan {
+  color: #00d4ff;
+  text-shadow: 0 0 8px rgba(0, 212, 255, 0.8), 0 0 16px rgba(0, 212, 255, 0.5), 0 0 24px rgba(0, 212, 255, 0.3);
+}
+
+.info-popup-value.glow-green {
+  color: #4CAF50;
+  text-shadow: 0 0 8px rgba(76, 175, 80, 0.8), 0 0 16px rgba(76, 175, 80, 0.5);
+}
+
+.info-popup-value.glow-blue {
+  color: #2196F3;
+  text-shadow: 0 0 8px rgba(33, 150, 243, 0.8), 0 0 16px rgba(33, 150, 243, 0.5);
+}
+
+.info-popup-progress {
+  margin-top: 10px;
+}
+
+.info-popup-progress-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 6px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.info-popup-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+  position: relative;
+}
+
+.info-popup-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.info-popup-progress-fill.low {
+  background: linear-gradient(90deg, #4CAF50 0%, #8BC34A 100%);
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.info-popup-progress-fill.medium {
+  background: linear-gradient(90deg, #FF9800 0%, #FFC107 100%);
+  box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
+}
+
+.info-popup-progress-fill.high {
+  background: linear-gradient(90deg, #f44336 0%, #FF5722 100%);
+  box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
+}
+
+.info-popup-stats {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-popup-stat {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.info-popup-stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #00d4ff;
+  text-shadow: 0 0 12px rgba(0, 212, 255, 0.6);
+}
+
+.info-popup-stat-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ========== 半透明外壳样式 ========== */
+.glass-top {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+}
+
+.glass-front {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+}
+
+.glass-right {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(200, 200, 200, 0.15) 0%, rgba(150, 150, 150, 0.1) 100%);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+}
+
+/* ========== 内部模块样式 ========== */
+.inner-module-top {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inner-module-front {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.inner-module-right {
+  width: 100%;
+  height: 100%;
+}
+
+.module-icon {
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+
+.module-label {
+  font-size: 8px;
+  color: #333;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* CPU 模块 */
+.cpu-top {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: 2px solid #00d4ff;
+  box-shadow: inset 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+.cpu-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cpu-arch {
+  font-size: 10px;
+  color: #00d4ff;
+  font-weight: bold;
+  font-family: monospace;
+}
+
+.cpu-cores {
+  font-size: 8px;
+  color: #888;
+}
+
+.cpu-usage {
+  font-size: 14px;
+  color: #4CAF50;
+  font-weight: bold;
+}
+
+.cpu-front {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #2d3748 0%, #1a202c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cpu-pins {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px;
+}
+
+.cpu-pin {
+  width: 3px;
+  height: 6px;
+  background: linear-gradient(180deg, #ffd700 0%, #b8860b 100%);
+  border-radius: 1px;
+}
+
+.cpu-right {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #1a202c 0%, #0d1117 100%);
+}
+
+/* 插件模块 */
+.plugin-top {
+  background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+}
+
+.plugin-front {
+  background: linear-gradient(180deg, #fff 0%, #f5f5f5 100%);
+}
+
+.plugin-right {
+  background: linear-gradient(180deg, #e8e8e8 0%, #d8d8d8 100%);
+}
+
+/* 流模块 */
+.stream-top {
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+}
+
+.stream-front {
+  background: linear-gradient(180deg, #fff 0%, #f5f5f5 100%);
+}
+
+.stream-right {
+  background: linear-gradient(180deg, #e8e8e8 0%, #d8d8d8 100%);
+}
+
+/* 内存模块 */
+.memory-top {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #1a3009 0%, #2d5016 50%, #1a3009 100%);
+  border-radius: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  padding: 0 4px;
+  position: relative;
+}
+
+.memory-chip-top {
+  width: 8px;
+  height: 6px;
+  background: #111;
+  border: 1px solid #333;
+}
+
+.memory-label-top {
+  position: absolute;
+  right: 4px;
+  font-size: 5px;
+  color: #4CAF50;
+  font-family: monospace;
+}
+
+.memory-notch-top {
+  position: absolute;
+  bottom: 0;
+  left: 35%;
+  width: 8px;
+  height: 3px;
+  background: #0a0a0a;
+}
+
+.memory-front {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #2d5016 0%, #1a3009 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border-left: 2px solid #ffd700;
+  border-right: 2px solid #ffd700;
+}
+
+.memory-chips {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  justify-content: center;
+}
+
+.memory-chip {
+  width: 10px;
+  height: 14px;
+  background: linear-gradient(180deg, #1a1a2e 0%, #0d0d1a 100%);
+  border: 1px solid #333;
+}
+
+.memory-info {
+  position: absolute;
+  bottom: 1px;
+  font-size: 6px;
+  color: #4CAF50;
+  font-family: monospace;
+  text-shadow: 0 0 4px #4CAF50;
+}
+
+.memory-right {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #1a3009 0%, #0d1a05 100%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 1px;
+}
+
+.memory-pins {
+  display: flex;
+  gap: 1px;
+}
+
+.memory-pin {
+  width: 2px;
+  height: 4px;
+  background: linear-gradient(180deg, #ffd700 0%, #b8860b 100%);
+}
+
+/* 网卡模块 */
+.nic-top {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #37474F 0%, #263238 100%);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.nic-port {
+  width: 10px;
+  height: 8px;
+  background: #111;
+  border: 1px solid #555;
+  border-radius: 1px;
+  position: relative;
+}
+
+.nic-port::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 2px;
+  background: #4CAF50;
+  border-radius: 1px;
+  box-shadow: 0 0 3px #4CAF50;
+}
+
+.nic-front {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #455A64 0%, #37474F 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  gap: 2px;
+}
+
+.nic-speed {
+  font-size: 7px;
+  color: #00d4ff;
+  font-family: monospace;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.nic-arrow-up {
+  color: #4CAF50;
+}
+
+.nic-arrow-down {
+  color: #2196F3;
+}
+
+.nic-right {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #37474F 0%, #263238 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  padding: 4px;
+}
+
+.nic-led {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+}
+
+.nic-led.green {
+  background: #4CAF50;
+  box-shadow: 0 0 4px #4CAF50;
+  animation: blink 0.5s infinite;
+}
+
+.nic-led.orange {
+  background: #FF9800;
+  box-shadow: 0 0 4px #FF9800;
+  animation: blink 0.3s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* 任务模块 */
+.task-top {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid #9C27B0;
+}
+
+.task-button {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #333 0%, #222 100%);
+  border: 1px solid #444;
+}
+
+.task-button.active {
+  background: linear-gradient(180deg, #9C27B0 0%, #7B1FA2 100%);
+  box-shadow: 0 0 4px #9C27B0;
+}
+
+.task-front {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #2d3748 0%, #1a202c 100%);
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  gap: 3px;
+}
+
+.task-slider {
+  width: 100%;
+  height: 6px;
+  background: #111;
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+}
+
+.task-slider-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #9C27B0 0%, #E91E63 100%);
+  border-radius: 3px;
+}
+
+.task-knob-row {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 2px;
+}
+
+.task-knob {
+  width: 10px;
+  height: 10px;
+  background: linear-gradient(135deg, #555 0%, #333 100%);
+  border-radius: 50%;
+  border: 1px solid #666;
+  position: relative;
+}
+
+.task-knob::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 3px;
+  background: #9C27B0;
+}
+
+.task-right {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #1a202c 0%, #0d1117 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+}
+
+.task-led-row {
+  display: flex;
+  gap: 3px;
+}
+
+.task-led {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #333;
+}
+
+.task-led.on {
+  background: #4CAF50;
+  box-shadow: 0 0 4px #4CAF50;
+}
+
+.task-led.warn {
+  background: #FF9800;
+  box-shadow: 0 0 4px #FF9800;
+}
+
+/* 日志模块 */
+.log-top {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #455A64 0%, #37474F 100%);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.log-handle-top {
+  width: 20px;
+  height: 4px;
+  background: #607D8B;
+  border-radius: 2px;
+}
+
+.log-front {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #546E7A 0%, #455A64 100%);
+  display: flex;
+  flex-direction: column;
+  padding: 3px;
+  gap: 2px;
+}
+
+.log-drawer {
+  flex: 1;
+  background: linear-gradient(180deg, #37474F 0%, #263238 100%);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #546E7A;
+}
+
+.log-drawer-handle {
+  width: 12px;
+  height: 3px;
+  background: #78909C;
+  border-radius: 1px;
+}
+
+.log-drawer-label {
+  font-size: 5px;
+  color: #90A4AE;
+  margin-left: 2px;
+}
+
+.log-right {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #37474F 0%, #263238 100%);
+  display: flex;
+  flex-direction: column;
+  padding: 3px;
+  gap: 2px;
+}
+
+.log-drawer-side {
+  flex: 1;
+  background: #263238;
+  border-radius: 1px;
+}
+
+/* 插件模块 - 显卡样式 */
+.plugin-card-top {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #4CAF50;
+}
+
+.plugin-chip {
+  width: 60%;
+  height: 50%;
+  background: #111;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plugin-chip-label {
+  font-size: 5px;
+  color: #4CAF50;
+  font-family: monospace;
+}
+
+.plugin-card-front {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #2d3748 0%, #1a202c 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  gap: 2px;
+}
+
+.plugin-fan {
+  width: 20px;
+  height: 20px;
+  background: radial-gradient(circle, #333 30%, #1a1a2e 70%);
+  border-radius: 50%;
+  border: 2px solid #444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: spin 2s linear infinite;
+}
+
+.plugin-fan-blade {
+  width: 14px;
+  height: 14px;
+  background: conic-gradient(from 0deg, #555 0deg, #333 45deg, #555 90deg, #333 135deg, #555 180deg, #333 225deg, #555 270deg, #333 315deg, #555 360deg);
+  border-radius: 50%;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.plugin-name {
+  font-size: 6px;
+  color: #4CAF50;
+  font-family: monospace;
+  text-transform: uppercase;
+}
+
+.plugin-card-right {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #1a202c 0%, #0d1117 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 2px;
+}
+
+.plugin-pcie {
+  width: 100%;
+  height: 6px;
+  background: linear-gradient(180deg, #ffd700 0%, #b8860b 100%);
+  border-radius: 1px;
+  display: flex;
+  gap: 1px;
+  padding: 1px;
+}
+
+.plugin-pcie-pin {
+  flex: 1;
+  background: #8b6914;
+}
+
+/* ========== 服务器设备样式 ========== */
+.server-top {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.server-led {
+  width: 6px;
+  height: 6px;
+  background: #4CAF50;
+  border-radius: 50%;
+  box-shadow: 0 0 4px #4CAF50;
+}
+
+.server-front {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #f5f5f5 0%, #e0e0e0 100%);
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+}
+
+.server-screen {
+  flex: 1;
+  background: #1a1a2e;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00d4ff;
+  font-size: 8px;
+  font-family: monospace;
+}
+
+.server-right {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #d0d0d0 0%, #b0b0b0 100%);
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  gap: 2px;
+}
+
+.server-vent {
+  height: 3px;
+  background: repeating-linear-gradient(
+    90deg,
+    #666 0px,
+    #666 2px,
+    transparent 2px,
+    transparent 4px
+  );
+  border-radius: 1px;
+}
+
+/* ========== NVR 设备样式 ========== */
+.nvr-top {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #37474F 0%, #263238 100%);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nvr-label {
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.nvr-front {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #455A64 0%, #37474F 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nvr-lens {
+  width: 24px;
+  height: 24px;
+  background: radial-gradient(circle, #00d4ff 0%, #0066aa 50%, #003366 100%);
+  border-radius: 50%;
+  border: 2px solid #1a1a2e;
+}
+
+.nvr-right {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #37474F 0%, #263238 100%);
+}
+
+/* ========== 播放器样式 ========== */
+.player-top {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #424242 0%, #212121 100%);
+  border-radius: 4px;
+}
+
+.player-front {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #616161 0%, #424242 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+}
+
+.player-screen {
+  width: 100%;
+  height: 100%;
+  background: #1a1a2e;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-icon {
+  width: 0;
+  height: 0;
+  border-left: 12px solid #00d4ff;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+}
+
+.player-right {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #424242 0%, #212121 100%);
+}
+
+/* ========== 存储设备样式 ========== */
+.storage-top {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #78909C 0%, #546E7A 100%);
+  border-radius: 4px;
+}
+
+.storage-front {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #90A4AE 0%, #78909C 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.storage-disk {
+  width: 32px;
+  height: 32px;
+  background: conic-gradient(from 0deg, #00d4ff 0%, #0099cc 25%, #00d4ff 50%, #0099cc 75%, #00d4ff 100%);
+  border-radius: 50%;
+  position: relative;
+}
+
+.storage-disk::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background: #1a1a2e;
+  border-radius: 50%;
+}
+
+.storage-right {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #78909C 0%, #546E7A 100%);
+}
+
+/* ========== 平台底座样式 ========== */
+.platform-top {
+  width: 100%;
+  height: 100%;
+  background: #444;
+}
+
+.platform-front {
+  width: 100%;
+  height: 100%;
+  background: #333;
+}
+
+.platform-right {
+  width: 100%;
+  height: 100%;
+  background: #2a2a2a;
+}
+
+/* ========== 配置面板样式 ========== */
+.config-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(30, 30, 50, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  color: #fff;
+  z-index: 10000;
+  min-width: 220px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.config-title {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 12px;
+  color: #667eea;
+}
+
+.config-row {
+  margin-bottom: 12px;
+}
+
+.config-row label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: #ccc;
+}
+
+.config-row input[type="range"] {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #333;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.config-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #667eea;
+  cursor: pointer;
+}
+
+.config-panel button {
+  width: 100%;
+  padding: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.config-panel button:hover {
+  opacity: 0.9;
+}
+
+.entity-info {
+  margin-top: 8px;
+}
+
+.entity-prop {
+  font-size: 11px;
+  color: #aaa;
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.prop-label {
+  color: #888;
+}
+
+.entity-prop span:last-child {
+  color: #00d4ff;
+  font-family: monospace;
+}

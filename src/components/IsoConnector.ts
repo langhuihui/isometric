@@ -2,6 +2,7 @@ import { LitElement, html, css } from 'lit'
 import { property, state } from 'lit/decorators.js'
 import type { IsoEntity } from './IsoEntity'
 import type { IsoScene } from './IsoScene'
+import { safeNumber } from './IsoEntity'
 
 // 面类型
 type FaceType = 'top' | 'bottom' | 'front' | 'back' | 'left' | 'right'
@@ -325,6 +326,15 @@ export class IsoConnector extends LitElement {
 
   static styles = css`
     :host {
+      /* 核心样式变量 */
+      --connector-color: #00d4ff;
+      --connector-width: 2px;
+      --animate-speed: 1;
+      --glow-color: var(--connector-color);
+      --particle-size: 8px;
+      --particle-color: var(--connector-color);
+      --particle-glow-color: var(--particle-color);
+
       display: block;
       position: absolute;
       left: 0;
@@ -346,6 +356,10 @@ export class IsoConnector extends LitElement {
       transform-origin: left center;
       pointer-events: auto;
       cursor: pointer;
+      width: var(--line-length);
+      height: var(--connector-width);
+      margin-top: calc(var(--connector-width) / -2);
+      background: var(--connector-color);
     }
 
     .line-inner.selected {
@@ -353,8 +367,42 @@ export class IsoConnector extends LitElement {
     }
 
     .line-inner.glow {
-      box-shadow: 0 0 4px var(--glow-color, currentColor),
-                  0 0 8px var(--glow-color, currentColor);
+      box-shadow: 0 0 4px var(--glow-color),
+                  0 0 8px var(--glow-color);
+    }
+
+    /* 虚线样式 */
+    .line-inner.line-dashed {
+      background: repeating-linear-gradient(
+        90deg,
+        var(--connector-color) 0px,
+        var(--connector-color) 8px,
+        transparent 8px,
+        transparent 12px
+      );
+    }
+
+    /* 点线样式 */
+    .line-inner.line-dotted {
+      background: repeating-linear-gradient(
+        90deg,
+        var(--connector-color) 0px,
+        var(--connector-color) 2px,
+        transparent 2px,
+        transparent 6px
+      );
+    }
+
+    /* 流动动画背景 */
+    .line-inner.line-flow {
+      background: repeating-linear-gradient(
+        90deg,
+        var(--connector-color) 0px,
+        var(--connector-color) 12px,
+        transparent 12px,
+        transparent 24px
+      );
+      background-size: 24px 100%;
     }
 
     @keyframes flow {
@@ -369,25 +417,25 @@ export class IsoConnector extends LitElement {
 
     @keyframes glow-pulse {
       0%, 100% { 
-        box-shadow: 0 0 2px var(--glow-color, currentColor),
-                    0 0 4px var(--glow-color, currentColor);
+        box-shadow: 0 0 2px var(--glow-color),
+                    0 0 4px var(--glow-color);
       }
       50% { 
-        box-shadow: 0 0 6px var(--glow-color, currentColor),
-                    0 0 12px var(--glow-color, currentColor);
+        box-shadow: 0 0 6px var(--glow-color),
+                    0 0 12px var(--glow-color);
       }
     }
 
     .animate-flow {
-      animation: flow calc(1s / var(--animate-speed, 1)) linear infinite;
+      animation: flow calc(1s / var(--animate-speed)) linear infinite;
     }
 
     .animate-pulse {
-      animation: pulse calc(2s / var(--animate-speed, 1)) ease-in-out infinite;
+      animation: pulse calc(2s / var(--animate-speed)) ease-in-out infinite;
     }
 
     .animate-glow {
-      animation: glow-pulse calc(2s / var(--animate-speed, 1)) ease-in-out infinite;
+      animation: glow-pulse calc(2s / var(--animate-speed)) ease-in-out infinite;
     }
 
     /* 锚点样式 */
@@ -419,9 +467,15 @@ export class IsoConnector extends LitElement {
       position: absolute;
       left: 0;
       top: 0;
+      width: var(--particle-size);
+      height: var(--particle-size);
+      margin-left: calc(var(--particle-size) / -2);
+      margin-top: calc(var(--particle-size) / -2);
+      background: var(--particle-color);
       border-radius: 50%;
       pointer-events: none;
       transform-style: preserve-3d;
+      transform: translate3d(var(--px), var(--py), var(--pz));
       will-change: transform;
     }
 
@@ -495,6 +549,10 @@ export class IsoConnector extends LitElement {
     super.connectedCallback()
     this._scene = this.closest('iso-scene') as IsoScene
     this._setupObservers()
+    
+    // 初始化 CSS 变量
+    this._updateCSSVariables()
+    
     setTimeout(() => {
       this._findEntities()
       this._updatePath()
@@ -547,18 +605,24 @@ export class IsoConnector extends LitElement {
     const toId = this.toConfig.entityId
 
     if (fromId) {
-      this._fromEntity = this._scene.querySelector(`iso-cube[entity-id="${fromId}"]`) as IsoEntity
+      // 使用属性选择器查找任意带有 entity-id 的元素
+      this._fromEntity = this._scene.querySelector(`[entity-id="${fromId}"]`) as IsoEntity
     }
 
     if (toId) {
-      this._toEntity = this._scene.querySelector(`iso-cube[entity-id="${toId}"]`) as IsoEntity
+      this._toEntity = this._scene.querySelector(`[entity-id="${toId}"]`) as IsoEntity
     }
   }
 
   updated(changedProperties: Map<string, unknown>) {
-
     if (changedProperties.has('from') || changedProperties.has('to')) {
       this._findEntities()
+    }
+
+    // 更新 CSS 变量
+    if (changedProperties.has('color') || changedProperties.has('width') || 
+        changedProperties.has('animation') || changedProperties.has('particles')) {
+      this._updateCSSVariables()
     }
 
     // 任何路径相关属性变化都需要重新计算
@@ -583,6 +647,23 @@ export class IsoConnector extends LitElement {
       this._lastEmitTime = 0
       this._lastReverseEmitTime = 0
     }
+  }
+
+  /**
+   * 更新 CSS 变量
+   */
+  private _updateCSSVariables() {
+    const animConfig = this.animationConfig
+    const particleConfig = this.particleConfig
+    const width = safeNumber(this.width, 2)
+    const particleSize = safeNumber(particleConfig.size, 8)
+    const glowColor = animConfig.color || this.color
+
+    this.style.setProperty('--connector-color', this.color)
+    this.style.setProperty('--connector-width', `${width}px`)
+    this.style.setProperty('--animate-speed', String(animConfig.speed))
+    this.style.setProperty('--glow-color', glowColor)
+    this.style.setProperty('--particle-size', `${particleSize}px`)
   }
 
   /**
@@ -844,8 +925,6 @@ export class IsoConnector extends LitElement {
     const config = this.particleConfig
     const pos = this._getPositionAtProgress(particle.progress)
     const color = config.color || this.color
-    const size = config.size
-    const halfSize = size / 2
 
     // 根据特效类型决定颜色
     let particleColorFinal = color
@@ -866,15 +945,10 @@ export class IsoConnector extends LitElement {
       <div 
         class="particle ${effectClass}"
         style="
-          width: ${size}px;
-          height: ${size}px;
-          background: ${particleColorFinal};
-          margin-left: ${-halfSize}px;
-          margin-top: ${-halfSize}px;
-          transform: translate3d(${pos.x}px, ${pos.y}px, ${pos.z}px);
           --px: ${pos.x}px;
           --py: ${pos.y}px;
           --pz: ${pos.z}px;
+          --particle-color: ${particleColorFinal};
           --particle-glow-color: ${particleColorFinal};
         "
       ></div>
@@ -887,8 +961,9 @@ export class IsoConnector extends LitElement {
   private _renderTrailParticle(particle: Particle, isReverse: boolean) {
     const config = this.particleConfig
     const color = config.color || this.color
-    const size = config.size
-    const trailCount = config.trailLength
+    // 确保所有值都是数字
+    const size = safeNumber(config.size, 8)
+    const trailCount = safeNumber(config.trailLength, 3)
     const trailStep = 0.03 // 每个拖尾点的进度间隔
 
     const trails = []
@@ -976,52 +1051,19 @@ export class IsoConnector extends LitElement {
     return transform
   }
 
-  private _getLineStyle(): string {
+  private _getLineStyleClass(): string {
     const animConfig = this.animationConfig
-    const baseStyle = `
-      width: var(--line-length);
-      height: ${this.width}px;
-      background: ${this.color};
-      margin-top: ${-this.width / 2}px;
-    `
-
+    const classes: string[] = []
+    
     if (this.lineStyle === 'dashed') {
-      return baseStyle + `
-        background: repeating-linear-gradient(
-          90deg,
-          ${this.color} 0px,
-          ${this.color} 8px,
-          transparent 8px,
-          transparent 12px
-        );
-      `
+      classes.push('line-dashed')
     } else if (this.lineStyle === 'dotted') {
-      return baseStyle + `
-        background: repeating-linear-gradient(
-          90deg,
-          ${this.color} 0px,
-          ${this.color} 2px,
-          transparent 2px,
-          transparent 6px
-        );
-      `
+      classes.push('line-dotted')
+    } else if (animConfig.type === 'flow') {
+      classes.push('line-flow')
     }
-
-    // flow 动画使用虚线背景
-    if (animConfig.type === 'flow') {
-      return baseStyle + `
-        background: repeating-linear-gradient(
-          90deg,
-          ${this.color} 0px,
-          ${this.color} 12px,
-          transparent 12px,
-          transparent 24px
-        );
-        background-size: 24px 100%;
-      `
-    }
-
-    return baseStyle
+    
+    return classes.join(' ')
   }
 
   private _getAnimationClass(): string {
@@ -1034,10 +1076,9 @@ export class IsoConnector extends LitElement {
   }
 
   render() {
-    const animConfig = this.animationConfig
     const particleConfig = this.particleConfig
     const animClass = this._getAnimationClass()
-    const glowColor = animConfig.color || this.color
+    const lineStyleClass = this._getLineStyleClass()
     const selectedClass = this.selected ? 'selected' : ''
 
     // 直接从实体获取连接点坐标（而不是从 segments）
@@ -1051,13 +1092,8 @@ export class IsoConnector extends LitElement {
           style="transform: ${this._getSegmentTransform(segment)};"
         >
           <div 
-            class="line-inner ${animClass} ${selectedClass}"
-            style="
-              ${this._getLineStyle()}
-              --line-length: ${segment.length}px;
-              --animate-speed: ${animConfig.speed};
-              --glow-color: ${glowColor};
-            "
+            class="line-inner ${lineStyleClass} ${animClass} ${selectedClass}"
+            style="--line-length: ${segment.length}px;"
           ></div>
         </div>
       `)}
