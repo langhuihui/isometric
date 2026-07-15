@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { margin: 0; overflow: hidden; background: #f0f0f0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    .scene {
+      width: 0; height: 0;
+      transform-style: preserve-3d;
+      transform: rotateX(60deg) rotateZ(-45deg);
+    }
+    .cube {
+      position: absolute;
+      transform-style: preserve-3d;
+      --w: 100px;
+      --h: 150px;
+      --d: 20px;
+      --r: 20px;
+      --top: #4CAF50;
+      --front: #388E3C;
+      --right: #2E7D32;
+      --left: #1B5E20;
+      --back: #1B5E20;
+    }
+    .face {
+      position: absolute;
+      box-sizing: border-box;
+      transform-origin: top left;
+    }
+    .top {
+      width: var(--w); height: var(--h);
+      background: var(--top);
+      transform: translateZ(var(--d));
+      border-radius: var(--r);
+    }
+    .front {
+      width: calc(var(--w) - 2 * var(--r)); height: var(--d);
+      background: var(--front);
+      transform: translate3d(var(--r), var(--h), var(--d)) rotateX(-90deg);
+    }
+    .right {
+      width: calc(var(--h) - 2 * var(--r)); height: var(--d);
+      background: var(--right);
+      transform: translate3d(var(--w), calc(var(--h) - var(--r)), var(--d)) rotateY(90deg) rotateZ(-90deg);
+    }
+    /* Corner Front-Right */
+    .corner-fr {
+      width: calc(var(--r) * 1.414); height: var(--d);
+      background: linear-gradient(to right, var(--front), var(--right));
+      transform: translate3d(calc(var(--w) - var(--r)), var(--h), var(--d)) rotateX(-90deg) rotateY(-45deg);
+    }
+    /* Corner Front-Left */
+    .corner-fl {
+      width: calc(var(--r) * 1.414); height: var(--d);
+      background: linear-gradient(to right, var(--left), var(--front));
+      transform: translate3d(0, calc(var(--h) - var(--r)), var(--d)) rotateX(-90deg) rotateY(45deg);
+    }
+    /* Corner Back-Right */
+    .corner-br {
+      width: calc(var(--r) * 1.414); height: var(--d);
+      background: linear-gradient(to right, var(--right), var(--back));
+      transform: translate3d(var(--w), var(--r), var(--d)) rotateX(-90deg) rotateY(-135deg);
+    }
+  </style>
+</head>
+<body>
+  <div class="scene">
+    <div class="cube">
+      <div class="face top"></div>
+      <div class="face front"></div>
+      <div class="face right"></div>
+      <div class="face corner-fr"></div>
+      <div class="face corner-fl"></div>
+      <div class="face corner-br"></div>
+    </div>
+  </div>
+</body>
+</html>

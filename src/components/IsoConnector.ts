@@ -47,6 +47,7 @@ interface ParticleConfig {
   enabled: boolean
   color: string
   size: number
+  glowSize: number
   rate: number
   speed: number
   effect: ParticleEffect
@@ -76,7 +77,7 @@ interface ConnectionConfig {
  * 属性格式：
  * - from/to: "entityId" 或 "entityId@face:position"（如 "box1@bottom:mr"）
  * - animation: "type" 或 "type speed" 或 "type speed color"（如 "flow 1.5 #ff0000"）
- * - particles: "color size rate speed effect direction trail"（如 "#fff 8 2 0.5 glow forward 3"）
+ * - particles: "color size rate speed effect direction trail glow"（如 "#fff 8 2 100 glow forward 3" 或 "#fff 8px 2hz 100v glow forward 3trail 2glow"，speed 单位为像素/秒）
  */
 export class IsoConnector extends LitElement {
   // 连接配置：格式为 "entityId" 或 "entityId@face:position"
@@ -176,14 +177,15 @@ export class IsoConnector extends LitElement {
    * 格式: "color size rate speed effect direction trail"
    * 支持带单位的参数（顺序无关）：
    * - size: 数字或带 px 后缀，如 "8" 或 "8px"
+   * - glowSize: 带 glow 后缀，如 "6glow"（发光大小倍数）
    * - rate: 带 hz 后缀，如 "2hz"
-   * - speed: 带 ms 后缀（毫秒转秒），如 "500ms"
+   * - speed: 带 v 后缀（像素/秒），如 "100v" 或 "100px/s"
    * - trail: 带 trail 后缀，如 "3trail"
    * 
    * 示例：
-   * - "#fff 8px 2hz 500ms glow forward 3trail"
-   * - "500ms 8px 2hz" (顺序无关)
-   * - "8 2 0.5" (无单位按顺序解析)
+   * - "#fff 8px 2hz 100v glow forward 3trail 6glow"
+   * - "100v 8px 2hz" (顺序无关)
+   * - "8 2 100" (无单位按顺序解析，speed 单位为像素/秒)
    */
   private _parseParticles(value: string): ParticleConfig {
     const trimmed = value.trim()
@@ -192,8 +194,9 @@ export class IsoConnector extends LitElement {
         enabled: false,
         color: '',
         size: 8,
+        glowSize: 1,
         rate: 2,
-        speed: 0.5,
+        speed: 100,  // 默认 100 像素/秒
         effect: 'glow',
         direction: 'forward',
         trailLength: 3
@@ -205,8 +208,9 @@ export class IsoConnector extends LitElement {
       enabled: true,
       color: '',
       size: 8,
+      glowSize: 1,
       rate: 2,
-      speed: 0.5,
+      speed: 100,  // 默认 100 像素/秒
       effect: 'glow',
       direction: 'forward',
       trailLength: 3
@@ -230,23 +234,28 @@ export class IsoConnector extends LitElement {
       else if (['forward', 'backward', 'bidirectional'].includes(lowerPart)) {
         config.direction = lowerPart as ParticleDirection
       }
-      // size: 带 px 后缀
-      else if (lowerPart.endsWith('px')) {
+      // size: 带 px 后缀（但不是 px/s）
+      else if (lowerPart.endsWith('px') && !lowerPart.includes('/')) {
         const num = parseFloat(lowerPart)
         if (!isNaN(num)) config.size = num
+      }
+      // glowSize: 带 glow 后缀（发光大小倍数）
+      else if (lowerPart.endsWith('glow')) {
+        const num = parseFloat(lowerPart)
+        if (!isNaN(num)) config.glowSize = num
       }
       // rate: 带 hz 后缀
       else if (lowerPart.endsWith('hz')) {
         const num = parseFloat(lowerPart)
         if (!isNaN(num)) config.rate = num
       }
-      // speed: 带 ms 后缀（毫秒转秒）
-      else if (lowerPart.endsWith('ms')) {
+      // speed: 带 v 后缀（像素/秒）
+      else if (lowerPart.endsWith('v')) {
         const num = parseFloat(lowerPart)
-        if (!isNaN(num)) config.speed = num / 1000
+        if (!isNaN(num)) config.speed = num
       }
-      // speed: 带 s 后缀（秒）
-      else if (lowerPart.endsWith('s') && !lowerPart.endsWith('ms')) {
+      // speed: 带 px/s 后缀（像素/秒）
+      else if (lowerPart.endsWith('px/s')) {
         const num = parseFloat(lowerPart)
         if (!isNaN(num)) config.speed = num
       }
@@ -261,7 +270,7 @@ export class IsoConnector extends LitElement {
         switch (bareNumberIndex) {
           case 0: config.size = num; break
           case 1: config.rate = num; break
-          case 2: config.speed = num; break
+          case 2: config.speed = num; break  // 像素/秒
           case 3: config.trailLength = num; break
         }
         bareNumberIndex++
@@ -334,6 +343,7 @@ export class IsoConnector extends LitElement {
       --particle-size: 8px;
       --particle-color: var(--connector-color);
       --particle-glow-color: var(--particle-color);
+      --particle-glow-size: 1;
 
       display: block;
       position: absolute;
@@ -481,14 +491,14 @@ export class IsoConnector extends LitElement {
 
     /* 发光特效 */
     .particle.effect-glow {
-      box-shadow: 0 0 6px 2px var(--particle-glow-color),
-                  0 0 12px 4px var(--particle-glow-color);
+      box-shadow: 0 0 calc(6px * var(--particle-glow-size)) calc(2px * var(--particle-glow-size)) var(--particle-glow-color),
+                  0 0 calc(12px * var(--particle-glow-size)) calc(4px * var(--particle-glow-size)) var(--particle-glow-color);
     }
 
     /* 脉冲特效 */
     .particle.effect-pulse {
-      box-shadow: 0 0 6px 2px var(--particle-glow-color),
-                  0 0 12px 4px var(--particle-glow-color);
+      box-shadow: 0 0 calc(6px * var(--particle-glow-size)) calc(2px * var(--particle-glow-size)) var(--particle-glow-color),
+                  0 0 calc(12px * var(--particle-glow-size)) calc(4px * var(--particle-glow-size)) var(--particle-glow-color);
       animation: particle-pulse 0.5s ease-in-out infinite;
     }
 
@@ -505,9 +515,9 @@ export class IsoConnector extends LitElement {
 
     /* 火花特效 */
     .particle.effect-spark {
-      box-shadow: 0 0 4px 1px var(--particle-glow-color),
-                  0 0 8px 2px var(--particle-glow-color),
-                  0 0 16px 4px var(--particle-glow-color);
+      box-shadow: 0 0 calc(4px * var(--particle-glow-size)) calc(1px * var(--particle-glow-size)) var(--particle-glow-color),
+                  0 0 calc(8px * var(--particle-glow-size)) calc(2px * var(--particle-glow-size)) var(--particle-glow-color),
+                  0 0 calc(16px * var(--particle-glow-size)) calc(4px * var(--particle-glow-size)) var(--particle-glow-color);
       animation: particle-spark 0.3s ease-in-out infinite;
     }
 
@@ -518,8 +528,8 @@ export class IsoConnector extends LitElement {
 
     /* 彩虹特效 - 带发光 */
     .particle.effect-rainbow {
-      box-shadow: 0 0 8px 3px var(--particle-glow-color),
-                  0 0 16px 6px var(--particle-glow-color);
+      box-shadow: 0 0 calc(8px * var(--particle-glow-size)) calc(3px * var(--particle-glow-size)) var(--particle-glow-color),
+                  0 0 calc(16px * var(--particle-glow-size)) calc(6px * var(--particle-glow-size)) var(--particle-glow-color);
     }
 
     /* 拖尾容器 */
@@ -657,6 +667,7 @@ export class IsoConnector extends LitElement {
     const particleConfig = this.particleConfig
     const width = safeNumber(this.width, 2)
     const particleSize = safeNumber(particleConfig.size, 8)
+    const particleGlowSize = safeNumber(particleConfig.glowSize, 1)
     const glowColor = animConfig.color || this.color
 
     this.style.setProperty('--connector-color', this.color)
@@ -664,6 +675,7 @@ export class IsoConnector extends LitElement {
     this.style.setProperty('--animate-speed', String(animConfig.speed))
     this.style.setProperty('--glow-color', glowColor)
     this.style.setProperty('--particle-size', `${particleSize}px`)
+    this.style.setProperty('--particle-glow-size', String(particleGlowSize))
   }
 
   /**
@@ -862,11 +874,12 @@ export class IsoConnector extends LitElement {
       }
     }
 
-    // 更新正向粒子位置
+    // 更新正向粒子位置（speed 是像素/秒，转换为 progress/秒）
+    const progressPerSecond = config.speed / this._totalPathLength
     this._particles = this._particles
       .map(p => ({
         ...p,
-        progress: p.progress + config.speed * deltaTime
+        progress: p.progress + progressPerSecond * deltaTime
       }))
       .filter(p => p.progress <= 1)
 
@@ -874,7 +887,7 @@ export class IsoConnector extends LitElement {
     this._reverseParticles = this._reverseParticles
       .map(p => ({
         ...p,
-        progress: p.progress - config.speed * deltaTime
+        progress: p.progress - progressPerSecond * deltaTime
       }))
       .filter(p => p.progress >= 0)
 

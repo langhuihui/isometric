@@ -1,364 +1,601 @@
-import {
-  plugins,
-  downstreams,
-  storages,
-  connectors,
-  cpuPins,
-  memoryChips,
-  memoryTopChips,
-  memoryPins,
-  taskButtons,
-  taskLedRows,
-  taskSliderFills,
-  logDrawers,
-  logDrawerSides,
-  pciePins,
-  serverVents
-} from './data'
+/**
+ * Monibuca Admin 场景 —— 基于 RoundedBox 的 SVG 渲染
+ *
+ * 坐标约定与原 IsoEntity 一致：x/y 为实体中心，z 为底面高度。
+ * RoundedBox 本地原点在盒子角点 (0,0,0)，摆放时 translate 到 (x-w/2, y-h/2, z)。
+ */
 
-// 插件卡片 HTML 模板
-export function createPluginCard(plugin: any, index: number) {
-  return `
-    <iso-cube entity-id="plugin-module-${index + 1}" x="${plugin.x}" y="100" z="0"
-                width="14" height="40" depth="50"
-                top-color="#1a1a2e" front-color="#2d3748" right-color="#1a202c">
-      <div slot="top" class="plugin-card-top">
-        <div class="plugin-chip">
-          <span class="plugin-chip-label">GPU</span>
-        </div>
-      </div>
-      <div slot="front" class="plugin-card-front tooltip-trigger">
-        <div class="plugin-fan">
-          <div class="plugin-fan-blade"></div>
-        </div>
-        <span class="plugin-name">${plugin.name}</span>
-        <div class="tooltip">${plugin.tooltip}</div>
-      </div>
-      <div slot="right" class="plugin-card-right">
-        <div class="plugin-pcie">${pciePins}</div>
-      </div>
-    </iso-cube>`
+import { renderRoundedBox, projectPoint, viewDepth } from './core/RoundedBox'
+import { plugins, downstreams, storages, connectors } from './data'
+
+export interface SceneNode {
+  id: string
+  /** 中心 X（与旧 IsoEntity 一致） */
+  x: number
+  /** 中心 Y */
+  y: number
+  z: number
+  w: number
+  h: number
+  d: number
+  r: number
+  colors: { top: string; front: string; right: string }
+  /** 贴在顶面的标签 */
+  label?: string
+  /** 贴在前面的标签 */
+  frontLabel?: string
+  tooltip?: string
+  /** 是否参与指针事件 */
+  interactive?: boolean
+  /** 绘制层：platform 最底，shell 罩子，entity 普通实体 */
+  layer?: 'platform' | 'shell' | 'entity'
+  shadow?: boolean
+  rim?: boolean
 }
 
-// 下级节点 HTML 模板
-export function createDownstreamServer(downstream: any) {
-  return `
-    <iso-cube entity-id="downstream-${downstream.id}" x="${downstream.x}" y="350" z="0" 
-                width="60" height="45" depth="70"
-                top-color="#e0e0e0" front-color="#f5f5f5" right-color="#d0d0d0">
-      <div slot="top" class="server-top">
-        <div class="server-led" style="background: #00BCD4; box-shadow: 0 0 4px #00BCD4;"></div>
-      </div>
-      <div slot="front" class="server-front tooltip-trigger">
-        <div class="server-screen">${downstream.name}</div>
-        <div class="tooltip">${downstream.tooltip}</div>
-      </div>
-      <div slot="right" class="server-right">
-        <div class="server-vent"></div>
-        <div class="server-vent"></div>
-      </div>
-    </iso-cube>`
+export interface SceneRenderOptions {
+  rotateX?: number
+  rotateZ?: number
+  /** 罩子当前深度 / z（用于收起动画） */
+  shellDepth?: number
+  shellZ?: number
+  width?: number
+  height?: number
+  /** 连线拐点圆弧半径，0 = 直角折线，默认 14 */
+  bendRadius?: number
+  /**
+   * 进出连接面的正交延伸长度（模型单位）。
+   * >0 时：先沿面法线离开，中间再折线，最后沿面法线进入。
+   * 默认 28；单条连线可在 data 里用 perpendicularLength 覆盖。
+   */
+  perpLength?: number
 }
 
-// 存储设备 HTML 模板
-export function createStorageDevice(storage: any, index: number) {
-  const hasTooltip = storage.tooltip ? `tooltip-trigger` : ''
-  return `
-    <iso-cube entity-id="storage-${storage.id}" x="380" y="180" z="${storage.z}" 
-                width="70" height="70" depth="20"
-                top-color="#78909C" front-color="#90A4AE" right-color="#78909C">
-      <div slot="top" class="storage-top"></div>
-      <div slot="front" class="storage-front ${hasTooltip}">
-        ${index === 0 ? '<div class="storage-disk"></div>' : ''}
-        ${storage.tooltip ? `<div class="tooltip">${storage.tooltip}</div>` : ''}
-      </div>
-      <div slot="right" class="storage-right"></div>
-    </iso-cube>`
+/** 盒子角点原点（用于 RoundedBox translate） */
+function originOf(n: SceneNode): [number, number, number] {
+  return [n.x - n.w / 2, n.y - n.h / 2, n.z]
 }
 
-// 连接器 HTML 模板
-export function createConnector(conn: any) {
-  return `
-    <iso-connector 
-      slot="connectors"
-      from="${conn.from}" to="${conn.to}" 
-      color="${conn.color}" width="2" 
-      route="${conn.route || 'x-y'}" 
-      animation="${conn.animation}">
-    </iso-connector>`
+type FaceName = 'top' | 'bottom' | 'front' | 'back' | 'left' | 'right'
+
+/** 面向外法线（模型空间） */
+const FACE_NORMALS: Record<FaceName, [number, number, number]> = {
+  top: [0, 0, 1],
+  bottom: [0, 0, -1],
+  front: [0, 1, 0],
+  back: [0, -1, 0],
+  left: [-1, 0, 0],
+  right: [1, 0, 0]
 }
 
-// 主场景 HTML 模板
-export function renderScene() {
-  return `
-    <!-- ========== 主服务器半透明外壳 ========== -->
-    <iso-cube id="main-shell" entity-id="main-shell" x="0" y="0" z="0" 
-                width="400" height="360" depth="140"
-                top-color="rgba(102, 126, 234, 0.2)" 
-                front-color="rgba(255, 255, 255, 0.1)" 
-                right-color="rgba(200, 200, 200, 0.1)"
-                no-pointer>
-      <div slot="top" class="glass-top"></div>
-      <div slot="front" class="glass-front"></div>
-      <div slot="right" class="glass-right"></div>
-    </iso-cube>
+const POS_UV: Record<string, [number, number]> = {
+  tl: [0, 0], tc: [0.5, 0], tr: [1, 0],
+  ml: [0, 0.5], mc: [0.5, 0.5], mr: [1, 0.5],
+  bl: [0, 1], bc: [0.5, 1], br: [1, 1]
+}
 
-    <!-- ========== 主服务器内部模块 ========== -->
-    
-    <!-- CPU 模块 -->
-    <iso-cube entity-id="cpu-module" x="0" y="0" z="10" 
-                width="80" height="80" depth="15"
-                top-color="#1a1a2e" front-color="#2d3748" right-color="#1a202c">
-      <div slot="top" class="cpu-top tooltip-trigger">
-        <div class="cpu-info">
-          <span class="cpu-arch">ARM64</span>
-          <span class="cpu-cores">12 核心</span>
-          <span class="cpu-usage">0%</span>
-        </div>
-        <div class="tooltip">CPU 处理器<br>服务器核心计算单元</div>
-      </div>
-      <div slot="front" class="cpu-front">
-        <div class="cpu-pins">${cpuPins}</div>
-      </div>
-      <div slot="right" class="cpu-right"></div>
-    </iso-cube>
+/**
+ * 指定面 + 面上相对位置 → 世界坐标锚点
+ * （中心制实体；u/v 约定与旧 IsoEntity 一致）
+ */
+function faceAnchorIso(n: SceneNode, face: string, pos: string): [number, number, number] {
+  const [u, v] = POS_UV[pos] || [0.5, 0.5]
+  const cx = n.x, cy = n.y
+  const f = (FACE_NORMALS[face as FaceName] ? face : 'bottom') as FaceName
 
-    <!-- 内存模块 -->
-    <iso-cube entity-id="memory-module" x="-60" y="-80" z="0" 
-                width="80" height="12" depth="35"
-                top-color="#1a1a2e" front-color="#2d5016" right-color="#1a3009">
-      <div slot="top" class="memory-top tooltip-trigger">
-        ${memoryTopChips}
-        <span class="memory-label-top">DDR5</span>
-        <div class="memory-notch-top"></div>
-        <div class="tooltip">内存 32GB<br>已用: 24.6GB / 可用: 7.4GB</div>
-      </div>
-      <div slot="front" class="memory-front">
-        <div class="memory-chips">${memoryChips}</div>
-        <span class="memory-info">76.8%</span>
-      </div>
-      <div slot="right" class="memory-right">
-        <div class="memory-pins">${memoryPins}</div>
-      </div>
-    </iso-cube>
+  switch (f) {
+    case 'top':
+      return [cx + n.w * (u - 0.5), cy + n.h * (v - 0.5), n.z + n.d]
+    case 'bottom':
+      return [cx + n.w * (u - 0.5), cy + n.h * (v - 0.5), n.z]
+    case 'front':
+      return [cx + n.w * (u - 0.5), cy + n.h / 2, n.z + n.d * (1 - v)]
+    case 'back':
+      return [cx + n.w * (u - 0.5), cy - n.h / 2, n.z + n.d * (1 - v)]
+    case 'right':
+      return [cx + n.w / 2, cy + n.h * (u - 0.5), n.z + n.d * (1 - v)]
+    case 'left':
+      return [cx - n.w / 2, cy + n.h * (u - 0.5), n.z + n.d * (1 - v)]
+  }
+}
 
-    <!-- 网卡模块 -->
-    <iso-cube entity-id="nic-module" x="120" y="-100" z="0" 
-                width="60" height="25" depth="45"
-                top-color="#37474F" front-color="#455A64" right-color="#37474F">
-      <div slot="top" class="nic-top">
-        <div class="nic-port"></div>
-        <div class="nic-port"></div>
-      </div>
-      <div slot="front" class="nic-front tooltip-trigger">
-        <div class="nic-speed"><span class="nic-arrow-up">↑</span>3.6MB/s</div>
-        <div class="nic-speed"><span class="nic-arrow-down">↓</span>3.5MB/s</div>
-        <div class="tooltip">网络接口<br>实时网络传输速率</div>
-      </div>
-      <div slot="right" class="nic-right">
-        <div class="nic-led green"></div>
-        <div class="nic-led orange"></div>
-      </div>
-    </iso-cube>
+type RouteAxis = 'x' | 'y' | 'z'
 
-    <!-- 插件模块 -->
-    ${plugins.map((p, i) => createPluginCard(p, i)).join('')}
+/** 中间段：轴对齐折线 */
+function axisRoute(
+  from: [number, number, number],
+  to: [number, number, number],
+  route: string
+): Array<[number, number, number]> {
+  if (route === 'direct') {
+    if (Math.hypot(to[0] - from[0], to[1] - from[1], to[2] - from[2]) < 0.1) return []
+    return [to]
+  }
 
-    <!-- 流模块 -->
-    <iso-cube entity-id="stream-module" x="120" y="100" z="0" 
-                width="50" height="50" depth="40"
-                top-color="#2196F3" front-color="#fff" right-color="#e0e0e0">
-      <div slot="top" class="inner-module-top stream-top"></div>
-      <div slot="front" class="inner-module-front stream-front tooltip-trigger">
-        <span class="module-icon">📡</span>
-        <span class="module-label">流</span>
-        <div class="tooltip">流管理<br>查看和管理所有活跃的媒体流</div>
-      </div>
-      <div slot="right" class="inner-module-right stream-right"></div>
-    </iso-cube>
+  const userAxes: RouteAxis[] =
+    !route || route === 'auto'
+      ? ['x', 'z', 'y']
+      : (route.split('-').filter((d): d is RouteAxis => ['x', 'y', 'z'].includes(d)))
 
-    <!-- 任务模块 -->
-    <iso-cube entity-id="task-module" x="60" y="100" z="0" 
-                width="60" height="50" depth="40"
-                top-color="#1a1a2e" front-color="#2d3748" right-color="#1a202c">
-      <div slot="top" class="task-top tooltip-trigger">
-        ${taskButtons}
-        <div class="tooltip">任务调度<br>管理拉流、转推等后台任务</div>
-      </div>
-      <div slot="front" class="task-front">
-        ${taskSliderFills.map(f => `<div class="task-slider"><div class="task-slider-fill" style="width: ${f.width};"></div></div>`).join('')}
-        <div class="task-knob-row">
-          <div class="task-knob"></div><div class="task-knob"></div><div class="task-knob"></div>
-        </div>
-      </div>
-      <div slot="right" class="task-right">
-        ${taskLedRows}
-      </div>
-    </iso-cube>
+  const allAxes: RouteAxis[] = ['x', 'z', 'y']
+  const routeOrder = [...userAxes, ...allAxes.filter(a => !userAxes.includes(a))]
+  const idx = { x: 0, y: 1, z: 2 } as const
+  const cur: [number, number, number] = [...from]
+  const target = { x: to[0], y: to[1], z: to[2] }
+  const pts: Array<[number, number, number]> = []
 
-    <!-- 日志模块 -->
-    <iso-cube entity-id="log-module" x="0" y="-100" z="0" 
-                width="60" height="50" depth="50"
-                top-color="#455A64" front-color="#546E7A" right-color="#37474F">
-      <div slot="top" class="log-top">
-        <div class="log-handle-top"></div>
-      </div>
-      <div slot="front" class="log-front tooltip-trigger">
-        ${logDrawers}
-        <div class="tooltip">系统日志<br>实时查看服务器运行日志</div>
-      </div>
-      <div slot="right" class="log-right">
-        ${logDrawerSides}
-      </div>
-    </iso-cube>
+  for (const axis of routeOrder) {
+    const i = idx[axis]
+    if (Math.abs(cur[i] - target[axis]) < 0.1) continue
+    cur[i] = target[axis]
+    pts.push([cur[0], cur[1], cur[2]])
+  }
+  return pts
+}
 
-    <!-- 主服务器底座 -->
-    <iso-cube entity-id="main-platform" x="0" y="0" z="-20" 
-                width="420" height="380" depth="20"
-                top-color="#444" front-color="#333" right-color="#2a2a2a">
-      <div slot="top" class="platform-top"></div>
-      <div slot="front" class="platform-front"></div>
-      <div slot="right" class="platform-right"></div>
-    </iso-cube>
+/**
+ * 完整折线路由：
+ * 1. 起点沿所连面法线伸出一段（正交离开）
+ * 2. 中间按 route 轴对齐（或 direct）
+ * 3. 终点沿所连面法线收回（正交进入）
+ *
+ * perpLength≤0 时不做正交进出（纯旧行为）。
+ */
+function routeWaypoints(
+  from: [number, number, number],
+  to: [number, number, number],
+  route = 'auto',
+  fromFace = 'bottom',
+  toFace = 'bottom',
+  perpLength = 0
+): Array<[number, number, number]> {
+  const n0 = FACE_NORMALS[(FACE_NORMALS[fromFace as FaceName] ? fromFace : 'bottom') as FaceName]
+  const n1 = FACE_NORMALS[(FACE_NORMALS[toFace as FaceName] ? toFace : 'bottom') as FaceName]
+  const len = Math.max(0, perpLength)
 
-    <!-- ========== 左上 - 远端服务器 ========== -->
-    <iso-cube entity-id="remote-server-1" x="-400" y="-250" z="0" 
-                width="70" height="50" depth="90"
-                top-color="#e0e0e0" front-color="#f5f5f5" right-color="#d0d0d0">
-      <div slot="top" class="server-top">
-        <div class="server-led"></div>
-        <div class="server-led" style="background: #2196F3; box-shadow: 0 0 4px #2196F3;"></div>
-      </div>
-      <div slot="front" class="server-front tooltip-trigger">
-        <div class="server-screen">RTSP://</div>
-        <div class="tooltip">远端服务器<br>拉流代理：主动从远端拉取流</div>
-      </div>
-      <div slot="right" class="server-right">${serverVents}</div>
-    </iso-cube>
+  const fromExt: [number, number, number] = len > 0
+    ? [from[0] + n0[0] * len, from[1] + n0[1] * len, from[2] + n0[2] * len]
+    : from
+  const toExt: [number, number, number] = len > 0
+    ? [to[0] + n1[0] * len, to[1] + n1[1] * len, to[2] + n1[2] * len]
+    : to
 
-    <iso-cube entity-id="remote-server-2" x="-400" y="-160" z="0" 
-                width="70" height="50" depth="90"
-                top-color="#e0e0e0" front-color="#f5f5f5" right-color="#d0d0d0">
-      <div slot="top" class="server-top">
-        <div class="server-led"></div>
-      </div>
-      <div slot="front" class="server-front tooltip-trigger">
-        <div class="server-screen">RTMP://</div>
-        <div class="tooltip">远端服务器<br>拉流代理：主动从远端拉取流</div>
-      </div>
-      <div slot="right" class="server-right">${serverVents}</div>
-    </iso-cube>
+  const pts: Array<[number, number, number]> = [from]
+  if (len > 0) pts.push(fromExt)
 
-    <!-- ========== 左中 - 推流器 (NVR/摄像头) ========== -->
-    <iso-cube entity-id="nvr-device" x="-380" y="20" z="0" 
-                width="60" height="60" depth="50"
-                top-color="#37474F" front-color="#455A64" right-color="#37474F">
-      <div slot="top" class="nvr-top">
-        <span class="nvr-label">NVR</span>
-      </div>
-      <div slot="front" class="nvr-front tooltip-trigger">
-        <div class="nvr-lens"></div>
-        <div class="tooltip">NVR / 摄像头<br>通过 RTSP/RTMP 推流到服务器</div>
-      </div>
-      <div slot="right" class="nvr-right"></div>
-    </iso-cube>
+  const mid = axisRoute(fromExt, toExt, route)
+  // axisRoute 末点应落在 toExt；direct 时就是 toExt，轴对齐时最后一点也是 toExt
+  for (const p of mid) {
+    const last = pts[pts.length - 1]
+    if (Math.hypot(p[0] - last[0], p[1] - last[1], p[2] - last[2]) > 0.1) pts.push(p)
+  }
 
-    <!-- ========== 左下 - 播放器群组 ========== -->
-    <iso-cube entity-id="player-1" x="-400" y="200" z="0" 
-                width="55" height="55" depth="45"
-                top-color="#424242" front-color="#616161" right-color="#424242">
-      <div slot="top" class="player-top"></div>
-      <div slot="front" class="player-front tooltip-trigger">
-        <div class="player-screen">
-          <div class="player-icon"></div>
-        </div>
-        <div class="tooltip">播放器<br>VLC/ffplay 等客户端播放</div>
-      </div>
-      <div slot="right" class="player-right"></div>
-    </iso-cube>
+  // 保证经过 toExt
+  {
+    const last = pts[pts.length - 1]
+    if (Math.hypot(last[0] - toExt[0], last[1] - toExt[1], last[2] - toExt[2]) > 0.1) {
+      pts.push(toExt)
+    }
+  }
 
-    <iso-cube entity-id="player-2" x="-400" y="280" z="0" 
-                width="55" height="55" depth="45"
-                top-color="#424242" front-color="#616161" right-color="#424242">
-      <div slot="top" class="player-top"></div>
-      <div slot="front" class="player-front tooltip-trigger">
-        <div class="player-screen">
-          <div class="player-icon"></div>
-        </div>
-        <div class="tooltip">Web 播放器<br>Jessibuca/WebRTC 播放</div>
-      </div>
-      <div slot="right" class="player-right"></div>
-    </iso-cube>
+  if (len > 0) {
+    const last = pts[pts.length - 1]
+    if (Math.hypot(last[0] - to[0], last[1] - to[1], last[2] - to[2]) > 0.1) pts.push(to)
+  }
 
-    <!-- ========== 右上 - 上级节点/CDN ========== -->
-    <iso-cube entity-id="upstream-server" x="380" y="-250" z="0" 
-                width="70" height="50" depth="90"
-                top-color="#e0e0e0" front-color="#f5f5f5" right-color="#d0d0d0">
-      <div slot="top" class="server-top">
-        <div class="server-led" style="background: #9C27B0; box-shadow: 0 0 4px #9C27B0;"></div>
-      </div>
-      <div slot="front" class="server-front tooltip-trigger">
-        <div class="server-screen">上级节点</div>
-        <div class="tooltip">上级 M7S 节点<br>级联架构中的父节点</div>
-      </div>
-      <div slot="right" class="server-right">${serverVents}</div>
-    </iso-cube>
+  return pts
+}
 
-    <iso-cube entity-id="cdn-server" x="380" y="-150" z="0" 
-                width="70" height="50" depth="90"
-                top-color="#e0e0e0" front-color="#f5f5f5" right-color="#d0d0d0">
-      <div slot="top" class="server-top">
-        <div class="server-led" style="background: #E91E63; box-shadow: 0 0 4px #E91E63;"></div>
-      </div>
-      <div slot="front" class="server-front tooltip-trigger">
-        <div class="server-screen">CDN</div>
-        <div class="tooltip">远端 CDN<br>转推到第三方 CDN 服务</div>
-      </div>
-      <div slot="right" class="server-right">${serverVents}</div>
-    </iso-cube>
+/**
+ * 把折线屏幕点转成 SVG path；bendRadius > 0 时在拐点用二次贝塞尔过渡。
+ * （等距投影后弯折角通常不是 90°，用 Q 比固定半径圆弧更稳、更好看）
+ * bendRadius 表示从拐点沿两侧回退的像素距离，会钳制到较短邻边一半。
+ */
+function polylinePath(
+  screenPts: Array<[number, number]>,
+  bendRadius = 12
+): string {
+  if (screenPts.length === 0) return ''
+  if (screenPts.length === 1) {
+    const [x, y] = screenPts[0]
+    return `M${x.toFixed(1)} ${y.toFixed(1)}`
+  }
+  if (screenPts.length === 2 || bendRadius <= 0) {
+    return 'M' + screenPts.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join('L')
+  }
 
-    <!-- ========== 右中 - 推流器设备 ========== -->
-    <iso-cube entity-id="pusher-device" x="380" y="20" z="0" 
-                width="60" height="60" depth="50"
-                top-color="#37474F" front-color="#455A64" right-color="#37474F">
-      <div slot="top" class="nvr-top">
-        <span class="nvr-label">OBS</span>
-      </div>
-      <div slot="front" class="nvr-front tooltip-trigger">
-        <div class="nvr-lens"></div>
-        <div class="tooltip">推流器<br>OBS/ffmpeg 等工具推流</div>
-      </div>
-      <div slot="right" class="nvr-right"></div>
-    </iso-cube>
+  const fmt = (n: number) => n.toFixed(1)
+  let d = `M${fmt(screenPts[0][0])} ${fmt(screenPts[0][1])}`
 
-    <!-- ========== 右下 - 存储设备 ========== -->
-    ${storages.map((s, i) => createStorageDevice(s, i)).join('')}
+  for (let i = 1; i < screenPts.length - 1; i++) {
+    const prev = screenPts[i - 1]
+    const curr = screenPts[i]
+    const next = screenPts[i + 1]
 
-    <!-- ========== 中下 - 下级节点 ========== -->
-    ${downstreams.map(d => createDownstreamServer(d)).join('')}
+    const v1: [number, number] = [curr[0] - prev[0], curr[1] - prev[1]]
+    const v2: [number, number] = [next[0] - curr[0], next[1] - curr[1]]
+    const len1 = Math.hypot(v1[0], v1[1])
+    const len2 = Math.hypot(v2[0], v2[1])
+    if (len1 < 0.5 || len2 < 0.5) {
+      d += `L${fmt(curr[0])} ${fmt(curr[1])}`
+      continue
+    }
 
-    <!-- ========== 操作台演示 ========== -->
-    <iso-console-front entity-id="control-console-front" x="-100" y="-350" z="0"
-                 width="120" height="80" depth="60"
-                 top-color="#1a1a2e" front-color="#2d3748" right-color="#1a202c">
-      <div slot="top" class="tooltip-trigger" style="width:100%;height:100%;background:linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;border:1px solid #00d4ff;">
-        <span style="font-size:10px;color:#00d4ff;font-weight:bold;">控制台</span>
-        <span style="font-size:8px;color:#888;margin-top:2px;">FRONT</span>
-        <div class="tooltip">操作控制台<br>facing="front" 向前倾斜</div>
-      </div>
-    </iso-console-front>
+    const r = Math.min(bendRadius, len1 / 2, len2 / 2)
+    const u1: [number, number] = [v1[0] / len1, v1[1] / len1]
+    const u2: [number, number] = [v2[0] / len2, v2[1] / len2]
+    const p1: [number, number] = [curr[0] - u1[0] * r, curr[1] - u1[1] * r]
+    const p2: [number, number] = [curr[0] + u2[0] * r, curr[1] + u2[1] * r]
 
-    <iso-console-right entity-id="control-console-right" x="100" y="-350" z="0"
-                 width="120" height="80" depth="60"
-                 top-color="#1a1a2e" front-color="#2d3748" right-color="#2d3748">
-      <div slot="top" class="tooltip-trigger" style="width:100%;height:100%;background:linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;border:1px solid #9C27B0;">
-        <span style="font-size:10px;color:#9C27B0;font-weight:bold;">控制台</span>
-        <span style="font-size:8px;color:#888;margin-top:2px;">RIGHT</span>
-        <div class="tooltip">操作控制台<br>facing="right" 向右倾斜</div>
-      </div>
-    </iso-console-right>
+    d += `L${fmt(p1[0])} ${fmt(p1[1])}`
+    d += `Q${fmt(curr[0])} ${fmt(curr[1])} ${fmt(p2[0])} ${fmt(p2[1])}`
+  }
 
-    <!-- ========== 连接线 ========== -->
-    ${connectors.map(c => createConnector(c)).join('')}
-  `
+  const last = screenPts[screenPts.length - 1]
+  d += `L${fmt(last[0])} ${fmt(last[1])}`
+  return d
+}
+
+function parseEndpoint(ep: string): { id: string; face: string; pos: string } {
+  const [id, rest] = ep.split('@')
+  if (!rest) return { id, face: 'bottom', pos: 'mc' }
+  const [face, pos] = rest.split(':')
+  return { id, face: face || 'bottom', pos: pos || 'mc' }
+}
+
+/** 顶面仿射矩阵文字（贴在顶面） */
+function topLabelMarkup(
+  n: SceneNode,
+  text: string,
+  rx: number,
+  rz: number,
+  fontSize = 14,
+  fill = 'rgba(255,255,255,0.92)'
+): string {
+  if (!text) return ''
+  const u = projectPoint(1, 0, 0, rx, rz)
+  const v = projectPoint(0, 1, 0, rx, rz)
+  const lo = projectPoint(n.w / 2, n.h / 2, n.d, rx, rz)
+  return `<text transform="matrix(${u[0]} ${u[1]} ${v[0]} ${v[1]} ${lo[0]} ${lo[1]})"
+            text-anchor="middle" dominant-baseline="middle"
+            font-size="${fontSize}" font-weight="600" fill="${fill}"
+            style="pointer-events:none">${escapeXml(text)}</text>`
+}
+
+/** 前面仿射矩阵文字（贴在前面） */
+function frontLabelMarkup(
+  n: SceneNode,
+  text: string,
+  rx: number,
+  rz: number,
+  fontSize = 12,
+  fill = 'rgba(255,255,255,0.95)'
+): string {
+  if (!text) return ''
+  // 前面：x 沿 width，z 沿 depth 向上；y = h（前缘）
+  const u = projectPoint(1, 0, 0, rx, rz)
+  const v = projectPoint(0, 0, -1, rx, rz) // 屏幕上「向上」对应模型 +Z，矩阵第二列向下为正时取 -Z
+  const o = projectPoint(n.w / 2, n.h, n.d / 2, rx, rz)
+  return `<text transform="matrix(${u[0]} ${u[1]} ${v[0]} ${v[1]} ${o[0]} ${o[1]})"
+            text-anchor="middle" dominant-baseline="middle"
+            font-size="${fontSize}" font-weight="600" fill="${fill}"
+            style="pointer-events:none">${escapeXml(text)}</text>`
+}
+
+function escapeXml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+/** 构建完整节点列表（罩子深度/高度可变） */
+export function buildSceneNodes(shellDepth = 140, shellZ = 0): SceneNode[] {
+  const nodes: SceneNode[] = [
+    // 底座
+    {
+      id: 'main-platform',
+      x: 0, y: 0, z: -20,
+      w: 420, h: 380, d: 20, r: 12,
+      colors: { top: '#3a3a4a', front: '#2a2a36', right: '#222230' },
+      layer: 'platform', shadow: false, rim: false, interactive: false
+    },
+    // 半透明罩子
+    {
+      id: 'main-shell',
+      x: 0, y: 0, z: shellZ,
+      w: 400, h: 360, d: shellDepth, r: 20,
+      colors: {
+        top: 'rgba(102,126,234,0.22)',
+        front: 'rgba(255,255,255,0.12)',
+        right: 'rgba(180,190,255,0.10)'
+      },
+      layer: 'shell', shadow: false, rim: true, interactive: false
+    },
+    // 内部模块
+    {
+      id: 'cpu-module',
+      x: 0, y: 0, z: 10,
+      w: 80, h: 80, d: 15, r: 8,
+      colors: { top: '#1a1a2e', front: '#2d3748', right: '#1a202c' },
+      label: 'CPU', frontLabel: 'ARM64',
+      tooltip: 'CPU 处理器', interactive: true, shadow: true
+    },
+    {
+      id: 'memory-module',
+      x: -60, y: -80, z: 0,
+      w: 80, h: 12, d: 35, r: 3,
+      colors: { top: '#1a1a2e', front: '#2d5016', right: '#1a3009' },
+      label: 'DDR5', frontLabel: '76.8%',
+      tooltip: '内存 32GB', interactive: true, shadow: true
+    },
+    {
+      id: 'nic-module',
+      x: 120, y: -100, z: 0,
+      w: 60, h: 25, d: 45, r: 6,
+      colors: { top: '#37474F', front: '#455A64', right: '#37474F' },
+      label: 'NIC', frontLabel: '↑↓',
+      tooltip: '网络接口', interactive: true, shadow: true
+    },
+    {
+      id: 'stream-module',
+      x: 120, y: 100, z: 0,
+      w: 50, h: 50, d: 40, r: 10,
+      colors: { top: '#2196F3', front: '#64B5F6', right: '#1976D2' },
+      label: '流',
+      tooltip: '流管理', interactive: true, shadow: true
+    },
+    {
+      id: 'task-module',
+      x: 60, y: 100, z: 0,
+      w: 60, h: 50, d: 40, r: 8,
+      colors: { top: '#1a1a2e', front: '#2d3748', right: '#1a202c' },
+      label: '任务',
+      tooltip: '任务调度', interactive: true, shadow: true
+    },
+    {
+      id: 'log-module',
+      x: 0, y: -100, z: 0,
+      w: 60, h: 50, d: 50, r: 8,
+      colors: { top: '#455A64', front: '#546E7A', right: '#37474F' },
+      label: '日志',
+      tooltip: '系统日志', interactive: true, shadow: true
+    },
+    // 远端 / 周边
+    {
+      id: 'remote-server-1',
+      x: -400, y: -250, z: 0,
+      w: 70, h: 50, d: 90, r: 10,
+      colors: { top: '#e0e0e0', front: '#f5f5f5', right: '#d0d0d0' },
+      frontLabel: 'RTSP://',
+      tooltip: '远端服务器 · RTSP', interactive: true, shadow: true
+    },
+    {
+      id: 'remote-server-2',
+      x: -400, y: -160, z: 0,
+      w: 70, h: 50, d: 90, r: 10,
+      colors: { top: '#e0e0e0', front: '#f5f5f5', right: '#d0d0d0' },
+      frontLabel: 'RTMP://',
+      tooltip: '远端服务器 · RTMP', interactive: true, shadow: true
+    },
+    {
+      id: 'nvr-device',
+      x: -380, y: 20, z: 0,
+      w: 60, h: 60, d: 50, r: 14,
+      colors: { top: '#37474F', front: '#455A64', right: '#37474F' },
+      label: 'NVR',
+      tooltip: 'NVR / 摄像头', interactive: true, shadow: true
+    },
+    {
+      id: 'player-1',
+      x: -400, y: 200, z: 0,
+      w: 55, h: 55, d: 45, r: 12,
+      colors: { top: '#424242', front: '#616161', right: '#424242' },
+      frontLabel: '▶',
+      tooltip: '播放器', interactive: true, shadow: true
+    },
+    {
+      id: 'player-2',
+      x: -400, y: 280, z: 0,
+      w: 55, h: 55, d: 45, r: 12,
+      colors: { top: '#424242', front: '#616161', right: '#424242' },
+      frontLabel: 'Web',
+      tooltip: 'Web 播放器', interactive: true, shadow: true
+    },
+    {
+      id: 'upstream-server',
+      x: 380, y: -250, z: 0,
+      w: 70, h: 50, d: 90, r: 10,
+      colors: { top: '#e0e0e0', front: '#f5f5f5', right: '#d0d0d0' },
+      frontLabel: '上级',
+      tooltip: '上级 M7S 节点', interactive: true, shadow: true
+    },
+    {
+      id: 'cdn-server',
+      x: 380, y: -150, z: 0,
+      w: 70, h: 50, d: 90, r: 10,
+      colors: { top: '#e0e0e0', front: '#f5f5f5', right: '#d0d0d0' },
+      frontLabel: 'CDN',
+      tooltip: '远端 CDN', interactive: true, shadow: true
+    },
+    {
+      id: 'pusher-device',
+      x: 380, y: 20, z: 0,
+      w: 60, h: 60, d: 50, r: 14,
+      colors: { top: '#37474F', front: '#455A64', right: '#37474F' },
+      label: 'OBS',
+      tooltip: '推流器', interactive: true, shadow: true
+    },
+    {
+      id: 'control-console-front',
+      x: -100, y: -350, z: 0,
+      w: 120, h: 80, d: 50, r: 12,
+      colors: { top: '#1a1a2e', front: '#2d3748', right: '#1a202c' },
+      label: '控制台',
+      tooltip: '操作控制台 FRONT', interactive: true, shadow: true
+    },
+    {
+      id: 'control-console-right',
+      x: 100, y: -350, z: 0,
+      w: 120, h: 80, d: 50, r: 12,
+      colors: { top: '#1a1a2e', front: '#2d3748', right: '#2d3748' },
+      label: '控制台',
+      tooltip: '操作控制台 RIGHT', interactive: true, shadow: true
+    }
+  ]
+
+  // 插件卡
+  plugins.forEach((p, i) => {
+    nodes.push({
+      id: `plugin-module-${i + 1}`,
+      x: p.x, y: 100, z: 0,
+      w: 14, h: 40, d: 50, r: 3,
+      colors: { top: '#1a1a2e', front: '#2d3748', right: '#1a202c' },
+      frontLabel: p.name.slice(0, 4),
+      tooltip: p.tooltip.replace(/<br>/g, ' · '),
+      interactive: true, shadow: true
+    })
+  })
+
+  // 存储堆叠
+  storages.forEach((s) => {
+    nodes.push({
+      id: `storage-${s.id}`,
+      x: 380, y: 180, z: s.z,
+      w: 70, h: 70, d: 20, r: 8,
+      colors: { top: '#78909C', front: '#90A4AE', right: '#78909C' },
+      label: s.id === 1 ? '存储' : '',
+      tooltip: s.tooltip?.replace(/<br>/g, ' · ') || '录像存储',
+      interactive: true, shadow: s.id === 1
+    })
+  })
+
+  // 下级节点
+  downstreams.forEach((d) => {
+    nodes.push({
+      id: `downstream-${d.id}`,
+      x: d.x, y: 350, z: 0,
+      w: 60, h: 45, d: 70, r: 10,
+      colors: { top: '#e0e0e0', front: '#f5f5f5', right: '#d0d0d0' },
+      frontLabel: d.name,
+      tooltip: d.tooltip.replace(/<br>/g, ' · '),
+      interactive: true, shadow: true
+    })
+  })
+
+  return nodes
+}
+
+/** 渲染完整 SVG 场景字符串 */
+export function renderSvgScene(options: SceneRenderOptions = {}): string {
+  const rx = options.rotateX ?? 60
+  const rz = options.rotateZ ?? 45
+  const shellDepth = options.shellDepth ?? 140
+  const shellZ = options.shellZ ?? 0
+  const viewW = options.width ?? 1400
+  const viewH = options.height ?? 950
+  const bendRadius = options.bendRadius ?? 14
+  const defaultPerp = options.perpLength ?? 28
+
+  const nodes = buildSceneNodes(shellDepth, shellZ)
+  const byId = new Map(nodes.map(n => [n.id, n]))
+
+  // 遮挡排序：由远及近；罩子最后画（半透明盖在内部模块上）
+  const sorted = [...nodes].sort((a, b) => {
+    const la = a.layer === 'shell' ? 2 : a.layer === 'platform' ? 0 : 1
+    const lb = b.layer === 'shell' ? 2 : b.layer === 'platform' ? 0 : 1
+    if (la !== lb) return la - lb
+    return (
+      viewDepth(a.x, a.y, a.z + a.d / 2, rx, rz) -
+      viewDepth(b.x, b.y, b.z + b.d / 2, rx, rz)
+    )
+  })
+
+  // 连线：正交进出 + 轴对齐折线（弯折处可选圆弧）
+  const linesMarkup = connectors.map((c, i) => {
+    const a = parseEndpoint(c.from)
+    const b = parseEndpoint(c.to)
+    const na = byId.get(a.id)
+    const nb = byId.get(b.id)
+    if (!na || !nb) return ''
+    const fromIso = faceAnchorIso(na, a.face, a.pos)
+    const toIso = faceAnchorIso(nb, b.face, b.pos)
+    const route = (c as { route?: string }).route || 'auto'
+    const perp = (c as { perpendicularLength?: number }).perpendicularLength ?? defaultPerp
+    const waypoints = routeWaypoints(fromIso, toIso, route, a.face, b.face, perp)
+    const screenPts = waypoints.map(([x, y, z]) => projectPoint(x, y, z, rx, rz))
+    // direct 中间段仍允许端点圆角（正交 stub 与中间段交接处）
+    const d = polylinePath(screenPts, bendRadius)
+    return `<path class="flow-line" data-link="${i}" stroke="${c.color}" stroke-width="2.2"
+              fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"
+              d="${d}"/>`
+  }).join('')
+
+  const platformMarkup: string[] = []
+  const entityMarkup: string[] = []
+  const shellMarkup: string[] = []
+
+  for (const n of sorted) {
+    const box = renderRoundedBox({
+      width: n.w, height: n.h, depth: n.d, radius: n.r,
+      rotateX: rx, rotateZ: rz, colors: n.colors,
+      shadow: n.shadow !== false && n.layer !== 'shell' && n.layer !== 'platform',
+      rim: n.rim !== false,
+      shadowOpacity: 0.28,
+      id: `n-${n.id}`
+    })
+    const [ox, oy, oz] = originOf(n)
+    const [sx, sy] = projectPoint(ox, oy, oz, rx, rz)
+    const labels =
+      topLabelMarkup(n, n.label || '', rx, rz, n.w < 40 ? 9 : 13) +
+      frontLabelMarkup(n, n.frontLabel || '', rx, rz, n.w < 40 ? 8 : 11,
+        n.colors.front.startsWith('#f') || n.colors.front.startsWith('#e') || n.colors.front === '#f5f5f5'
+          ? '#333' : 'rgba(255,255,255,0.95)')
+
+    const cls = [
+      'scene-node',
+      n.interactive === false ? 'no-pointer' : 'interactive',
+      n.layer || 'entity'
+    ].join(' ')
+
+    const g =
+      `<g class="${cls}" data-id="${n.id}" ` +
+      `data-x="${n.x}" data-y="${n.y}" data-z="${n.z}" ` +
+      `data-w="${n.w}" data-h="${n.h}" data-d="${n.d}" ` +
+      `data-tooltip="${escapeXml(n.tooltip || '')}" ` +
+      `transform="translate(${sx.toFixed(2)} ${sy.toFixed(2)})">` +
+      box.markup + labels + `</g>`
+
+    if (n.layer === 'platform') platformMarkup.push(g)
+    else if (n.layer === 'shell') shellMarkup.push(g)
+    else entityMarkup.push(g)
+  }
+
+  // 视口：固定画布，原点居中（与旧 center-origin 一致）
+  const halfW = viewW / 2
+  const halfH = viewH / 2
+
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" class="iso-svg-scene" ` +
+    `viewBox="${(-halfW).toFixed(0)} ${(-halfH).toFixed(0)} ${viewW} ${viewH}" ` +
+    `width="100%" height="100%" preserveAspectRatio="xMidYMid meet">` +
+    `<defs>` +
+    `<style>` +
+    `.flow-line{stroke-dasharray:6 8;animation:flow 1s linear infinite}` +
+    `@keyframes flow{to{stroke-dashoffset:-14}}` +
+    `.scene-node.interactive{cursor:pointer}` +
+    `.scene-node.interactive:hover{filter:brightness(1.15) drop-shadow(0 0 6px rgba(120,160,255,.45))}` +
+    `.scene-node.no-pointer{pointer-events:none}` +
+    `.scene-node.shell{pointer-events:none}` +
+    `</style>` +
+    `</defs>` +
+    `<g class="scene-root">` +
+    platformMarkup.join('') +
+    `<g class="connectors-layer">${linesMarkup}</g>` +
+    entityMarkup.join('') +
+    shellMarkup.join('') +
+    `</g></svg>`
+  )
+}
+
+/** 兼容旧入口名 */
+export function renderScene(options?: SceneRenderOptions): string {
+  return renderSvgScene(options)
 }

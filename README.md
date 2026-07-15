@@ -1,275 +1,226 @@
-# Isometric Engine
+# iso-engine
 
-一个轻量级的 2.5D 等距视图引擎，基于 CSS 3D Transform 和 Lit Web Components 构建。
+轻量级 2.5D 等距视图引擎。提供两套渲染路径：
 
-## 特性
+| 路径 | 技术 | 适用 |
+|------|------|------|
+| **SVG RoundedBox（推荐）** | 正交投影 + 纯 SVG | 水平圆角立方体、组合架构图、发 npm 后命令式拼场景 |
+| CSS 3D Web Components | Lit + CSS 3D Transform | 直角立方体、插槽贴面内容、原有 `<iso-scene>` 生态 |
 
-- 🎨 **纯 CSS 3D 渲染** - 基于 CSS 3D Transform，无需 Canvas/WebGL，性能优异
-- 🧩 **声明式组件** - 提供 Web Components，支持 HTML 声明式使用
-- 📦 **命令式 API** - 同时支持 JavaScript 命令式创建和管理
-- 🔗 **智能连线** - 支持实体间连线，多种路由算法，流动动画
-- 💡 **光影系统** - 内置光照效果和阴影
-- 🎭 **特效系统** - 可扩展的特效管理器
-- 📐 **灵活布局** - 支持等距坐标和网格坐标两种定位方式
+无需 Canvas / WebGL。
 
 ## 安装
 
 ```bash
-pnpm install iso-engine
+pnpm add iso-engine
+# 或 npm i iso-engine / yarn add iso-engine
 ```
 
-## 快速开始
+```bash
+pnpm build   # 本地开发后发版：产出 dist/
+npm publish  # 需已登录 npm；包名 iso-engine
+```
 
-### 声明式使用（Web Components）
+入口：
+
+```ts
+import {
+  renderRoundedBox,
+  createRoundedBoxSvg,
+  projectPoint,
+  viewDepth,
+  IsoRoundedCube, // 副作用：注册 <iso-rounded-cube>
+} from 'iso-engine'
+```
+
+## 快速开始（推荐：SVG RoundedBox）
+
+### 单个圆角盒
+
+```js
+import { renderRoundedBox } from 'iso-engine'
+
+const { svg } = renderRoundedBox({
+  width: 140,
+  height: 140,
+  depth: 80,
+  radius: 28,          // 仅水平圆角；上下棱保持锐利
+  rotateX: 60,
+  rotateZ: 45,
+  shadow: true,
+  colors: {
+    top: '#7fa8ef',
+    front: '#4f7fd9',
+    right: '#3763b0',
+  },
+})
+
+document.getElementById('box').innerHTML = svg
+```
+
+### 声明式 Web Component
 
 ```html
 <script type="module">
-  import 'iso-engine'
+  import { IsoRoundedCube } from 'iso-engine'
+</script>
+
+<iso-rounded-cube
+  width="130" height="130" depth="44" radius="40"
+  top-color="#1c1626" front-color="#8a5cf6" right-color="#5b34c4"
+  shadow>
+</iso-rounded-cube>
+```
+
+| 属性 | 说明 |
+|------|------|
+| `width` / `height` / `depth` | X / Y / Z 尺寸 |
+| `radius` | 水平圆角，自动钳制到 `min(W,H)/2` |
+| `top-color` / `front-color` / `right-color` | 三面颜色（支持 rgba） |
+| `rotate-x` / `rotate-z` | 投影俯仰 / 水平旋转 |
+| `shadow` | 地面软阴影 |
+| `no-rim` | 关闭顶面边缘高光 |
+| `scale` | 显示缩放 |
+
+> `<iso-rounded-cube>` 输出的是**已投影的平面 SVG**，不要再放进 CSS 3D 的 `<iso-scene>` 里（会被二次变换）。
+
+### 组合多个盒子（场景）
+
+`renderRoundedBox` 返回的 `markup` 原点在模型 `(0,0,0)` 的投影处；用 `projectPoint` 摆世界坐标，用 `viewDepth` 做画家算法排序：
+
+```js
+import { renderRoundedBox, projectPoint, viewDepth } from 'iso-engine'
+
+const RX = 60, RZ = 45
+const nodes = [
+  { id: 'a', x: 0, y: 0, z: 0, w: 100, h: 100, d: 60, r: 20,
+    colors: { top: '#8fe3b8', front: '#54bd8b', right: '#3a9a6e' } },
+  { id: 'b', x: 160, y: 40, z: 0, w: 90, h: 90, d: 70, r: 18,
+    colors: { top: '#7fa8ef', front: '#4f7fd9', right: '#3763b0' } },
+]
+
+nodes.sort((a, b) =>
+  viewDepth(a.x + a.w / 2, a.y + a.h / 2, a.z + a.d / 2, RX, RZ) -
+  viewDepth(b.x + b.w / 2, b.y + b.h / 2, b.z + b.d / 2, RX, RZ)
+)
+
+const parts = nodes.map((n) => {
+  const box = renderRoundedBox({
+    width: n.w, height: n.h, depth: n.d, radius: n.r,
+    rotateX: RX, rotateZ: RZ, colors: n.colors, id: n.id, shadow: true,
+  })
+  const [sx, sy] = projectPoint(n.x, n.y, n.z, RX, RZ)
+  return `<g transform="translate(${sx} ${sy})">${box.markup}</g>`
+})
+
+root.innerHTML = `<svg viewBox="-200 -200 600 500">${parts.join('')}</svg>`
+```
+
+遮挡是按整盒排序，适合分离的积木场景；互相穿模或半透明叠层过多时可能不准。
+
+### `renderRoundedBox` API
+
+```ts
+function renderRoundedBox(options?: RoundedBoxOptions): RoundedBoxResult
+```
+
+**选项（节选）**
+
+| 字段 | 默认 | 说明 |
+|------|------|------|
+| `width` / `height` / `depth` | 100 | 尺寸 |
+| `radius` | 16 | 水平圆角 |
+| `colors.top/front/right` | 蓝色系 | 面色 |
+| `rotateX` / `rotateZ` | 60 / 45 | 投影角 |
+| `gradientStops` | 8 | 侧面渐变采样密度 |
+| `rim` | true | 顶边高光 |
+| `shadow` | false | 软阴影 |
+| `id` | 自动 | 渐变/滤镜 id 前缀（场景内须唯一） |
+
+**返回值**
+
+| 字段 | 说明 |
+|------|------|
+| `svg` | 完整 `<svg>…</svg>`，可直接 `innerHTML` |
+| `markup` | 无外层 svg，便于拼进大场景 |
+| `viewBox` | `{ x, y, width, height }` |
+| `topPath` | 顶面轮廓 `d`，可裁剪/贴标签 |
+| `project(x,y,z)` | 该盒模型坐标 → 本地屏幕坐标 |
+
+另导出：
+
+- `createRoundedBoxSvg(options)` → `SVGSVGElement`
+- `projectPoint(x, y, z, rotateX?, rotateZ?)` → `[sx, sy]`
+- `viewDepth(x, y, z, rotateX?, rotateZ?)` → number（越大越近）
+
+## CSS 3D 路径（直角立方体 / 插槽内容）
+
+适合面内容用 HTML 插槽、且不需要水平圆角时：
+
+```html
+<script type="module">
+  import 'iso-engine' // 或分别 import IsoScene / IsoCube / IsoConnector
 </script>
 
 <iso-scene center-origin width="800" height="600">
-  <!-- 创建一个立方体实体 -->
-  <iso-cube 
-    entity-id="box1" 
-    x="0" y="0" z="0" 
+  <iso-cube
+    entity-id="box1" x="0" y="0" z="0"
     width="100" height="100" depth="50"
-    top-color="#667eea" 
-    front-color="#5a67d8" 
-    right-color="#4c51bf">
-    <div slot="top">顶面内容</div>
-    <div slot="front">前面内容</div>
-    <div slot="right">右面内容</div>
+    top-color="#667eea" front-color="#5a67d8" right-color="#4c51bf">
+    <div slot="top">顶</div>
+    <div slot="front">前</div>
+    <div slot="right">右</div>
   </iso-cube>
-
-  <!-- 创建另一个实体 -->
-  <iso-cube 
-    entity-id="box2" 
-    x="200" y="100" z="0" 
-    width="80" height="80" depth="60">
-  </iso-cube>
-
-  <!-- 连接两个实体 -->
-  <iso-connector 
+  <iso-connector
     slot="connectors"
-    from="box1@bottom:mr" 
-    to="box2@bottom:ml"
-    color="#00d4ff" width="2" 
-    route="x-y" 
-    animation="flow">
+    from="box1@bottom:mr" to="box2@bottom:ml"
+    color="#00d4ff" route="x-y" animation="flow">
   </iso-connector>
 </iso-scene>
 ```
 
-### 命令式使用（JavaScript API）
+命令式：
 
-```javascript
+```js
 import { IsometricEngine } from 'iso-engine'
 
-// 创建引擎实例
 const engine = new IsometricEngine()
-
-// 创建场景
-const scene = engine.createScene(document.getElementById('container'), {
-  width: 800,
-  height: 600,
-  centerOrigin: true
-})
-
-// 创建实体
-const entity1 = engine.createEntity({
-  x: 0, y: 0, z: 0,
-  width: 100, height: 100, depth: 50,
-  colors: {
-    top: '#667eea',
-    front: '#5a67d8',
-    right: '#4c51bf'
-  }
-})
-
-const entity2 = engine.createEntity({
-  x: 200, y: 100, z: 0,
-  width: 80, height: 80, depth: 60
-})
-
-// 添加到场景
-scene.addEntity(entity1)
-scene.addEntity(entity2)
-
-// 创建连线
-const connector = engine.createConnector(entity1, entity2, {
-  color: '#00d4ff',
-  width: 2,
-  animated: true
-})
-engine.addConnectorToScene(connector, scene)
+const scene = engine.createScene(container, { width: 800, height: 600, centerOrigin: true })
+const e1 = engine.createEntity({ x: 0, y: 0, z: 0, width: 100, height: 100, depth: 50 })
+scene.addEntity(e1)
 ```
 
-## 核心组件
+### 主要自定义元素
 
-### `<iso-scene>` 场景容器
+- `<iso-scene>` — CSS 3D 场景容器  
+- `<iso-cube>` — 直角立方体（slots: `top` / `front` / `right`）  
+- `<iso-rounded-cube>` — SVG 圆角盒（见上）  
+- `<iso-connector>` — 连线（`from`/`to`、`route`、`animation`、`particles`）  
+- `<iso-console-front>` / `<iso-console-right>`、`<iso-plane>`
 
-场景是所有等距元素的容器，负责 3D 变换和坐标系统。
+连线锚点：`entityId@face:position`（face: top/bottom/…；position: tl/tc/tr/ml/mc/mr/bl/bc/br）。  
+路由：`auto` | `direct` | `x-y` | `y-x` | …
 
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `width` | number | 800 | 场景宽度（px） |
-| `height` | number | 500 | 场景高度（px） |
-| `center-origin` | boolean | false | 是否将原点居中 |
-| `origin-x` | number | 0 | 原点 X 偏移 |
-| `origin-y` | number | 0 | 原点 Y 偏移 |
-| `perspective` | number | 0 | 透视距离（0 为正交投影） |
+动态改 CSS 3D 场景视角：
 
-### `<iso-cube>` 等距立方体
-
-基础的 3D 立方体实体，支持自定义各面内容。
-
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `entity-id` | string | '' | 实体唯一标识 |
-| `x` | number | 0 | 等距 X 坐标 |
-| `y` | number | 0 | 等距 Y 坐标 |
-| `z` | number | 0 | 等距 Z 坐标（高度） |
-| `width` | number | 100 | 宽度 |
-| `height` | number | 100 | 高度（深度方向） |
-| `depth` | number | 50 | 深度（垂直方向） |
-| `top-color` | string | '#ccc' | 顶面颜色 |
-| `front-color` | string | '#aaa' | 前面颜色 |
-| `right-color` | string | '#888' | 右面颜色 |
-| `no-pointer` | boolean | false | 禁用鼠标事件 |
-| `row` | number | null | 网格行（可选） |
-| `col` | number | null | 网格列（可选） |
-| `grid-size` | number | 30 | 网格单元大小 |
-
-**插槽（Slots）：**
-- `top` - 顶面内容
-- `front` - 前面内容
-- `right` - 右面内容
-
-### `<iso-console>` 控制台面板
-
-带倾斜面板的控制台组件，适合展示仪表盘、控制面板等。
-
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `tilt` | number | 30 | 面板倾斜角度 |
-| `facing` | 'front' \| 'right' | 'front' | 面板朝向 |
-
-### `<iso-plane>` 平面
-
-单一平面组件，可用于地板、墙面等。
-
-### `<iso-connector>` 连线
-
-连接两个实体的连线组件，支持多种路由和动画效果。
-
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `from` | string | - | 起始连接点，格式：`entityId` 或 `entityId@face:position` |
-| `to` | string | - | 目标连接点，格式同上 |
-| `color` | string | '#00d4ff' | 连线颜色 |
-| `width` | number | 2 | 连线宽度 |
-| `line-style` | string | 'solid' | 线条样式：`solid` / `dashed` / `dotted` |
-| `route` | string | 'auto' | 路由类型 |
-| `perpendicular-length` | number | 0 | 垂直延伸距离 |
-| `animation` | string | 'none' | 动画配置，格式：`type` 或 `type speed` 或 `type speed color` |
-| `particles` | string | '' | 粒子配置，格式：`color size rate speed effect direction trail` |
-
-**连接点格式：** `entityId@face:position`
-- **entityId**：目标实体的 ID
-- **face**：`top` | `bottom` | `front` | `back` | `left` | `right`
-- **position**：
-  - `tl` (top-left) | `tc` (top-center) | `tr` (top-right)
-  - `ml` (middle-left) | `mc` (middle-center) | `mr` (middle-right)
-  - `bl` (bottom-left) | `bc` (bottom-center) | `br` (bottom-right)
-
-**示例：** `from="box1@bottom:mr"` 表示从 box1 实体底面的右中位置连接
-
-**动画格式：** `type speed color`
-- `animation="flow"` - 默认速度的流动动画
-- `animation="flow 1.5"` - 1.5 倍速流动动画
-- `animation="glow 1 #ff0000"` - 红色发光动画
-
-**粒子格式：** 空格分隔的参数，支持带单位（顺序无关）
-- `particles="#fff 8px 2hz 500ms glow forward 3trail"` - 带单位的完整配置
-- `particles="500ms 8px 2hz"` - 顺序无关，通过单位识别
-- `particles="8 2 0.5"` - 无单位按顺序解析（size, rate, speed）
-- `particles="rainbow bidirectional"` - 彩虹双向粒子
-- 单位说明：`px`=尺寸, `hz`=频率, `ms`=毫秒速度, `s`=秒速度, `trail`=拖尾长度
-
-**路由类型：** `auto` | `direct` | `x-y` | `y-x` | `x-z` | `z-x` 等轴组合
-
-## 坐标系统
-
-引擎使用等距坐标系统：
-
-- **X 轴**：向右下方延伸
-- **Y 轴**：向左下方延伸
-- **Z 轴**：垂直向上
-
-```
-        Z
-        |
-        |
-        +------ X
-       /
-      /
-     Y
-```
-
-## 动态更新角度
-
-可以通过全局事件动态调整等距视角：
-
-```javascript
+```js
 window.dispatchEvent(new CustomEvent('iso-angles-changed', {
-  detail: { 
-    rotateX: 60,    // 俯视角度
-    rotateZ: 45,    // 旋转角度
-    perspective: 0  // 透视距离（0 为正交）
-  }
+  detail: { rotateX: 60, rotateZ: 45, perspective: 0 },
 }))
 ```
 
-## 开发
+## 坐标系统
+
+- **X**：向右下方  
+- **Y**：向左下方  
+- **Z**：垂直向上  
+
+## 本地开发
 
 ```bash
-# 安装依赖
 pnpm install
-
-# 启动开发服务器
-pnpm dev
-
-# 构建
-pnpm build
-```
-
-## 项目结构
-
-```
-src/
-├── components/       # 组件
-│   ├── IsoScene.ts      # 场景组件
-│   ├── IsoEntity.ts     # 实体基类
-│   ├── IsoCube.ts       # 立方体组件
-│   ├── IsoConsole.ts    # 控制台组件
-│   ├── IsoPlane.ts      # 平面组件
-│   ├── IsoConnector.ts  # 连线组件
-│   ├── Entity.ts        # 命令式实体
-│   ├── Connector.ts     # 命令式连线
-│   └── ...
-├── core/             # 核心模块
-│   ├── IsometricEngine.ts  # 引擎主类
-│   ├── Scene.ts           # 场景类
-│   ├── Transform.ts       # 变换工具
-│   └── BaseComponent.ts   # 组件基类
-├── effects/          # 特效系统
-│   ├── EffectManager.ts   # 特效管理器
-│   └── LightingSystem.ts  # 光影系统
-├── events/           # 事件系统
-├── utils/            # 工具函数
-├── constants/        # 常量定义
-├── types/            # 类型定义
-└── index.ts          # 入口文件
+pnpm dev      # http://localhost:5373  — index.html / demo-rounded.html
+pnpm build    # 生成 dist/，供 npm 发布
 ```
 
 ## 许可证

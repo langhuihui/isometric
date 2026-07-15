@@ -10,7 +10,7 @@
   <div class="header">
     <h1>Monibuca Admin 超级面板</h1>
     <span class="badge">For m7s Pro V5</span>
-    <span class="tip">+ 提示: 按住鼠标拖拽可移动画布</span>
+    <span class="tip">提示: 拖拽空白处平移 · 滚轮缩放 · 圆角由 RoundedBox SVG 渲染</span>
   </div>
 
   <!-- 角度配置控制面板 -->
@@ -25,12 +25,20 @@
       <input type="range" id="rotateZ-slider" min="20" max="70" value="45" step="1">
     </div>
     <div class="config-row">
-      <label>透视距离: <span id="perspective-value">0</span>px <span style="color:#888;font-size:10px">(0=正交)</span></label>
-      <input type="range" id="perspective-slider" min="0" max="5000" value="0" step="100">
+      <label>透视距离: <span id="perspective-value">0</span>px <span style="color:#888;font-size:10px">(SVG 正交)</span></label>
+      <input type="range" id="perspective-slider" min="0" max="5000" value="0" step="100" disabled>
+    </div>
+    <div class="config-row">
+      <label>连线弯折圆角: <span id="bend-value">14</span>px <span style="color:#888;font-size:10px">(0=直角)</span></label>
+      <input type="range" id="bend-slider" min="0" max="40" value="14" step="1">
+    </div>
+    <div class="config-row">
+      <label>正交伸出: <span id="perp-value">28</span> <span style="color:#888;font-size:10px">(面法线方向)</span></label>
+      <input type="range" id="perp-slider" min="0" max="80" value="28" step="2">
     </div>
     <button id="reset-angles">重置默认</button>
     <button id="toggle-shell" style="margin-top: 4px;">收起罩子</button>
-    
+
     <!-- 选中实体属性显示 -->
     <div class="entity-info" id="entity-info" style="display: none;">
       <div class="config-title" style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">选中实体</div>
@@ -45,9 +53,7 @@
     </div>
   </div>
 
-  <iso-scene center-origin width="1400" height="950">
-    <!-- 场景内容由 main.ts 动态生成 -->
-  </iso-scene>
+  <div id="scene-holder" class="scene-holder" aria-label="等距场景"></div>
 
   <!-- 详细信息浮动框 -->
   <div class="info-popup" id="info-popup"></div>

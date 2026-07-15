@@ -585,6 +585,10 @@
                 <input type="range" id="particle-size-slider" min="4" max="20" value="8" step="1">
             </div>
             <div class="config-row">
+                <label>发光大小: <span id="particle-glow-size-value">1</span>x</label>
+                <input type="range" id="particle-glow-size-slider" min="0.5" max="5" value="1" step="0.5">
+            </div>
+            <div class="config-row">
                 <label>发射频率: <span id="particle-rate-value">2</span>/秒</label>
                 <input type="range" id="particle-rate-slider" min="0.5" max="10" value="2" step="0.5">
             </div>
@@ -829,6 +833,8 @@
         const particleColorInput = document.getElementById('particle-color-input')
         const particleSizeSlider = document.getElementById('particle-size-slider')
         const particleSizeValue = document.getElementById('particle-size-value')
+        const particleGlowSizeSlider = document.getElementById('particle-glow-size-slider')
+        const particleGlowSizeValue = document.getElementById('particle-glow-size-value')
         const particleRateSlider = document.getElementById('particle-rate-slider')
         const particleRateValue = document.getElementById('particle-rate-value')
         const particleSpeedSlider = document.getElementById('particle-speed-slider')
@@ -923,17 +929,21 @@
         function parseParticles(value) {
             const trimmed = (value || '').trim()
             if (!trimmed || trimmed === 'none') {
-                return { enabled: false, color: '', size: 8, rate: 2, speed: 0.5, effect: 'glow', direction: 'forward', trailLength: 3 }
+                return { enabled: false, color: '', size: 8, glowSize: 1, rate: 2, speed: 0.5, effect: 'glow', direction: 'forward', trailLength: 3 }
             }
             const parts = trimmed.split(/\s+/)
-            const config = { enabled: true, color: '', size: 8, rate: 2, speed: 0.5, effect: 'glow', direction: 'forward', trailLength: 3 }
+            const config = { enabled: true, color: '', size: 8, glowSize: 1, rate: 2, speed: 0.5, effect: 'glow', direction: 'forward', trailLength: 3 }
             for (const part of parts) {
-                if (part.startsWith('#') || part.startsWith('rgb') || part.startsWith('hsl')) {
+                const lowerPart = part.toLowerCase()
+                if (part.startsWith('#') || lowerPart.startsWith('rgb') || lowerPart.startsWith('hsl')) {
                     config.color = part
-                } else if (['none', 'glow', 'trail', 'pulse', 'rainbow', 'spark'].includes(part)) {
-                    config.effect = part
-                } else if (['forward', 'backward', 'bidirectional'].includes(part)) {
-                    config.direction = part
+                } else if (['none', 'glow', 'trail', 'pulse', 'rainbow', 'spark'].includes(lowerPart)) {
+                    config.effect = lowerPart
+                } else if (['forward', 'backward', 'bidirectional'].includes(lowerPart)) {
+                    config.direction = lowerPart
+                } else if (lowerPart.endsWith('glow')) {
+                    const num = parseFloat(lowerPart)
+                    if (!isNaN(num)) config.glowSize = num
                 } else if (!isNaN(parseFloat(part))) {
                     const num = parseFloat(part)
                     if (config.size === 8 && num >= 1 && num <= 50) config.size = num
@@ -952,6 +962,7 @@
             if (config.color) parts.push(config.color)
             parts.push(config.size, config.rate, config.speed, config.effect, config.direction)
             if (config.effect === 'trail') parts.push(config.trailLength)
+            if (config.glowSize && config.glowSize !== 1) parts.push(`${config.glowSize}glow`)
             return parts.join(' ')
         }
 
@@ -1128,6 +1139,7 @@
             particlesEnabled.checked = particles.enabled
             particleColorInput.value = particles.color || connector.getAttribute('color') || '#ffffff'
             particleSizeSlider.value = particles.size
+            particleGlowSizeSlider.value = particles.glowSize
             particleRateSlider.value = particles.rate
             particleSpeedSlider.value = particles.speed
             particleEffectSelect.value = particles.effect
@@ -1147,6 +1159,7 @@
             perpValue.textContent = perpSlider.value
             speedValue.textContent = speedSlider.value
             particleSizeValue.textContent = particleSizeSlider.value
+            particleGlowSizeValue.textContent = particleGlowSizeSlider.value
             particleRateValue.textContent = particleRateSlider.value
             particleSpeedValue.textContent = particleSpeedSlider.value
             particleTrailValue.textContent = particleTrailSlider.value
@@ -1193,6 +1206,7 @@
                 enabled: particlesEnabled.checked,
                 color: particleColorInput.value,
                 size: parseFloat(particleSizeSlider.value),
+                glowSize: parseFloat(particleGlowSizeSlider.value),
                 rate: parseFloat(particleRateSlider.value),
                 speed: parseFloat(particleSpeedSlider.value),
                 effect: particleEffectSelect.value,
@@ -1205,6 +1219,7 @@
             perpValue.textContent = perpSlider.value
             speedValue.textContent = speedSlider.value
             particleSizeValue.textContent = particleSizeSlider.value
+            particleGlowSizeValue.textContent = particleGlowSizeSlider.value
             particleRateValue.textContent = particleRateSlider.value
             particleSpeedValue.textContent = particleSpeedSlider.value
             particleTrailValue.textContent = particleTrailSlider.value
@@ -1274,6 +1289,7 @@
             particlesEnabled.checked = Math.random() > 0.5
             particleColorInput.value = randomParticleColor
             particleSizeSlider.value = Math.floor(Math.random() * 12) + 4
+            particleGlowSizeSlider.value = (Math.random() * 3 + 0.5).toFixed(1)
             particleRateSlider.value = (Math.random() * 5 + 0.5).toFixed(1)
             particleSpeedSlider.value = (Math.random() * 1.5 + 0.2).toFixed(1)
             particleEffectSelect.value = particleEffects[Math.floor(Math.random() * particleEffects.length)]
@@ -1301,6 +1317,7 @@
         particlesEnabled.addEventListener('change', updateSelectedConnector)
         particleColorInput.addEventListener('input', updateSelectedConnector)
         particleSizeSlider.addEventListener('input', updateSelectedConnector)
+        particleGlowSizeSlider.addEventListener('input', updateSelectedConnector)
         particleRateSlider.addEventListener('input', updateSelectedConnector)
         particleSpeedSlider.addEventListener('input', updateSelectedConnector)
         particleEffectSelect.addEventListener('change', updateSelectedConnector)

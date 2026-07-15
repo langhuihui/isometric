@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>圆角立方体 SVG 渲染 Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #12122b;
+      min-height: 100vh;
+      color: #e0e0f0;
+      padding: 24px;
+    }
+
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    .subtitle { color: #8888aa; font-size: 13px; margin-bottom: 20px; }
+    h2 { font-size: 16px; margin: 0 0 12px; color: #aab6ff; }
+
+    .layout { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+
+    .panel {
+      background: #191938;
+      border: 1px solid #2b2b55;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    /* ---------- 调参区 ---------- */
+    .playground { display: flex; gap: 24px; flex-wrap: wrap; }
+
+    .controls { width: 280px; display: flex; flex-direction: column; gap: 10px; }
+    .ctl { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .ctl label { width: 88px; color: #9a9ac0; flex-shrink: 0; }
+    .ctl input[type="range"] { flex: 1; accent-color: #667eea; }
+    .ctl .val { width: 36px; text-align: right; color: #7fd8a8; font-variant-numeric: tabular-nums; }
+    .ctl input[type="color"] {
+      width: 42px; height: 24px; border: none; background: none; cursor: pointer;
+    }
+    .ctl input[type="checkbox"] { accent-color: #667eea; }
+
+    .presets { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .presets button {
+      background: #26264d; color: #c6c6ee; border: 1px solid #3a3a70;
+      border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer;
+    }
+    .presets button:hover { background: #33336a; }
+
+    .stage {
+      width: 420px; height: 420px;
+      background:
+        radial-gradient(circle at 50% 42%, #23234d 0%, #15152f 70%);
+      border: 1px solid #2b2b55;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+
+    .meta { font-size: 12px; color: #77779a; margin-top: 10px; line-height: 1.7; }
+    .meta b { color: #aab6ff; font-weight: 600; }
+
+    /* ---------- 组合场景 ---------- */
+    .scene-panel { flex: 1; min-width: 560px; }
+    #scene-holder svg { display: block; width: 100%; height: auto; }
+
+    .node-group { cursor: pointer; transition: filter .15s; }
+    .node-group:hover { filter: brightness(1.18) drop-shadow(0 0 6px rgba(120,150,255,.55)); }
+
+    .flow-line {
+      fill: none; stroke-linecap: round;
+      stroke-dasharray: 6 8;
+      animation: flow 1s linear infinite;
+    }
+    @keyframes flow { to { stroke-dashoffset: -14; } }
+
+    code.inline {
+      background: #26264d; padding: 1px 6px; border-radius: 4px;
+      font-size: 12px; color: #9fd8ff;
+    }
+  </style>
+</head>
+<body>
+  <h1>圆角立方体 · 纯 SVG 程序化渲染</h1>
+  <p class="subtitle">
+    水平方向圆角（四条垂直棱倒角），上下边缘锐利。
+    顶面轮廓 = 圆角矩形贝塞尔控制点直接投影（仿射不变，精确）；
+    侧面 = 一条路径 + 一个水平渐变（stop 位置为各母线的精确屏幕坐标）。
+    全矢量输出，无 Canvas / WebGL。
+  </p>
+
+  <div class="layout">
+    <!-- ==================== 参数调试 ==================== -->
+    <div class="panel">
+      <h2>参数调试</h2>
+      <div class="playground">
+        <div class="controls">
+          <div class="ctl"><label>Width (X)</label><input type="range" id="w" min="20" max="240" value="140"><span class="val" id="w-v"></span></div>
+          <div class="ctl"><label>Height (Y)</label><input type="range" id="h" min="20" max="240" value="140"><span class="val" id="h-v"></span></div>
+          <div class="ctl"><label>Depth (Z)</label><input type="range" id="d" min="20" max="240" value="96"><span class="val" id="d-v"></span></div>
+          <div class="ctl"><label>Radius</label><input type="range" id="r" min="0" max="120" value="28"><span class="val" id="r-v"></span></div>
+          <div class="ctl"><label>RotateX</label><input type="range" id="rx" min="10" max="85" value="60"><span class="val" id="rx-v"></span></div>
+          <div class="ctl"><label>RotateZ</label><input type="range" id="rz" min="5" max="85" value="45"><span class="val" id="rz-v"></span></div>
+          <div class="ctl"><label>渐变 stops</label><input type="range" id="stops" min="2" max="16" value="8"><span class="val" id="stops-v"></span></div>
+          <div class="ctl">
+            <label>颜色</label>
+            <input type="color" id="c-top" value="#7fa8ef" title="顶面">
+            <input type="color" id="c-front" value="#4f7fd9" title="前面">
+            <input type="color" id="c-right" value="#3763b0" title="右面">
+          </div>
+          <div class="ctl"><label>阴影</label><input type="checkbox" id="shadow" checked></div>
+          <div class="ctl"><label>边缘高光</label><input type="checkbox" id="rim" checked></div>
+          <div class="presets">
+            <button data-preset="device">电源盒(参考图)</button>
+            <button data-preset="chip">扁平芯片</button>
+            <button data-preset="tower">机柜</button>
+            <button data-preset="pill">胶囊(r=max)</button>
+            <button data-preset="sharp">直角对照</button>
+          </div>
+          <div class="meta" id="meta"></div>
+        </div>
+        <div class="stage" id="stage"></div>
+      </div>
+    </div>
+
+    <!-- ==================== 声明式组件 ==================== -->
+    <div class="panel">
+      <h2>声明式用法 · &lt;iso-rounded-cube&gt;</h2>
+      <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap">
+        <iso-rounded-cube width="130" height="130" depth="44" radius="40" shadow
+          top-color="#1c1626" front-color="#8a5cf6" right-color="#5b34c4"></iso-rounded-cube>
+        <iso-rounded-cube width="110" height="110" depth="90" radius="26" shadow
+          top-color="#8fe3b8" front-color="#54bd8b" right-color="#3a9a6e"></iso-rounded-cube>
+        <iso-rounded-cube width="120" height="80" depth="60" radius="40" shadow
+          top-color="#ffd47f" front-color="#e8a94f" right-color="#c4842e"></iso-rounded-cube>
+      </div>
+      <pre style="margin-top:14px; background:#12122b; border-radius:8px; padding:12px; font-size:12px; color:#9fd8ff; overflow:auto">&lt;iso-rounded-cube width="130" height="130" depth="44" radius="40" shadow
+  top-color="#1c1626" front-color="#8a5cf6" right-color="#5b34c4"&gt;
+&lt;/iso-rounded-cube&gt;</pre>
+    </div>
+
+    <!-- ==================== 组合场景 ==================== -->
+    <div class="panel scene-panel">
+      <h2>组合场景 · 用引擎 API 生成的架构图</h2>
+      <p class="subtitle" style="margin-bottom:12px">
+        每个节点都是一次 <code class="inline">renderRoundedBox()</code> 调用，
+        通过 <code class="inline">projectPoint()</code> 摆放世界坐标、
+        <code class="inline">viewDepth()</code> 做遮挡排序，连线与标签为普通 SVG 元素。
+      </p>
+      <div id="scene-holder"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { renderRoundedBox, projectPoint, viewDepth } from './src/core/RoundedBox'
+    import './src/components/IsoRoundedCube.ts'
+
+    // ================= 参数调试区 =================
+    const $ = id => document.getElementById(id)
+    const sliders = ['w', 'h', 'd', 'r', 'rx', 'rz', 'stops']
+    const stage = $('stage')
+
+    function currentOptions() {
+      return {
+        width: +$('w').value,
+        height: +$('h').value,
+        depth: +$('d').value,
+        radius: +$('r').value,
+        rotateX: +$('rx').value,
+        rotateZ: +$('rz').value,
+        gradientStops: +$('stops').value,
+        shadow: $('shadow').checked,
+        rim: $('rim').checked,
+        colors: {
+          top: $('c-top').value,
+          front: $('c-front').value,
+          right: $('c-right').value
+        }
+      }
+    }
+
+    function refresh() {
+      for (const id of sliders) $(id + '-v').textContent = $(id).value
+      const t0 = performance.now()
+      const result = renderRoundedBox(currentOptions())
+      const ms = (performance.now() - t0).toFixed(2)
+      stage.innerHTML = result.svg
+      const svg = stage.firstElementChild
+      svg.style.maxWidth = '92%'
+      svg.style.maxHeight = '92%'
+      const nodes = svg.querySelectorAll('*').length
+      const kb = (result.svg.length / 1024).toFixed(1)
+      $('meta').innerHTML =
+        `生成耗时 <b>${ms} ms</b> · SVG 节点 <b>${nodes}</b> 个 · 体积 <b>${kb} KB</b><br>` +
+        `圆角半径会自动钳制到 min(W,H)/2，拖到最大试试 →「胶囊柱」形态`
+    }
+
+    const presets = {
+      device: { w: 200, h: 200, d: 56, r: 60, top: '#1c1626', front: '#8a5cf6', right: '#5b34c4' },
+      chip:   { w: 200, h: 200, d: 34, r: 24, top: '#1f2a44', front: '#31415f', right: '#1a2338' },
+      tower:  { w: 90, h: 90, d: 220, r: 26, top: '#e8ebf2', front: '#c3cad8', right: '#9aa4b8' },
+      pill:   { w: 200, h: 120, d: 70, r: 60, top: '#a8e6c8', front: '#5cbf94', right: '#3d9a72' },
+      sharp:  { w: 140, h: 140, d: 96, r: 0, top: '#7fa8ef', front: '#4f7fd9', right: '#3763b0' }
+    }
+    document.querySelectorAll('[data-preset]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const p = presets[btn.dataset.preset]
+        $('w').value = p.w; $('h').value = p.h; $('d').value = p.d; $('r').value = p.r
+        $('c-top').value = p.top; $('c-front').value = p.front; $('c-right').value = p.right
+        refresh()
+      })
+    })
+
+    for (const id of [...sliders, 'c-top', 'c-front', 'c-right', 'shadow', 'rim']) {
+      $(id).addEventListener('input', refresh)
+    }
+    refresh()
+
+    // ================= 组合场景 =================
+    // 一个「客户端 → 网关 → 服务 → 数据库」的小型架构图
+    const RX = 60, RZ = 45
+    const at = (x, y, z) => projectPoint(x, y, z, RX, RZ)
+
+    const nodes = [
+      { id: 'platform', x: -40, y: -40, z: -26, w: 560, h: 460, d: 26, r: 13,
+        colors: { top: '#20204a', front: '#181838', right: '#131330' }, label: '' },
+      { id: 'client', x: 0, y: 300, z: 0, w: 96, h: 96, d: 64, r: 20,
+        colors: { top: '#ffd47f', front: '#e8a94f', right: '#c4842e' }, label: '客户端' },
+      { id: 'gateway', x: 190, y: 170, z: 0, w: 110, h: 110, d: 84, r: 26,
+        colors: { top: '#7fa8ef', front: '#4f7fd9', right: '#3763b0' }, label: '网关' },
+      { id: 'svc-a', x: 60, y: 20, z: 0, w: 96, h: 96, d: 72, r: 22,
+        colors: { top: '#8fe3b8', front: '#54bd8b', right: '#3a9a6e' }, label: '服务 A' },
+      { id: 'svc-b', x: 330, y: 20, z: 0, w: 96, h: 96, d: 72, r: 22,
+        colors: { top: '#c9a4f2', front: '#9d6fd6', right: '#7c50b4' }, label: '服务 B' },
+      { id: 'db', x: 200, y: -120, z: 0, w: 88, h: 88, d: 120, r: 34,
+        colors: { top: '#8ad8e8', front: '#4fa8c4', right: '#3a84a0' }, label: '数据库' },
+      { id: 'cache', x: 380, y: -110, z: 0, w: 70, h: 70, d: 46, r: 18,
+        colors: { top: '#f79a9a', front: '#d96a6a', right: '#b44c4c' }, label: '缓存' }
+    ]
+
+    // 连线：世界坐标锚点（顶面中心之间，途径拐点）
+    const links = [
+      { from: 'client', to: 'gateway', color: '#ffd47f' },
+      { from: 'gateway', to: 'svc-a', color: '#7fa8ef' },
+      { from: 'gateway', to: 'svc-b', color: '#7fa8ef' },
+      { from: 'svc-a', to: 'db', color: '#8fe3b8' },
+      { from: 'svc-b', to: 'db', color: '#c9a4f2' },
+      { from: 'svc-b', to: 'cache', color: '#f79a9a' }
+    ]
+
+    function buildScene() {
+      const parts = []
+
+      // 遮挡排序：按盒中心的观察深度，由远及近
+      const sorted = [...nodes].sort((a, b) =>
+        viewDepth(a.x + a.w / 2, a.y + a.h / 2, a.z + a.d / 2, RX, RZ) -
+        viewDepth(b.x + b.w / 2, b.y + b.h / 2, b.z + b.d / 2, RX, RZ))
+
+      const topCenter = n => at(n.x + n.w / 2, n.y + n.h / 2, n.z + n.d)
+
+      // 连线画在平台之上、节点之下
+      const linesMarkup = links.map(l => {
+        const a = topCenter(nodes.find(n => n.id === l.from))
+        const b = topCenter(nodes.find(n => n.id === l.to))
+        const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2 - 30
+        return `<path class="flow-line" stroke="${l.color}" stroke-width="2.5" opacity="0.9"
+                  d="M${a[0]} ${a[1]} Q${mx} ${my} ${b[0]} ${b[1]}"/>`
+      }).join('')
+
+      for (const n of sorted) {
+        const box = renderRoundedBox({
+          width: n.w, height: n.h, depth: n.d, radius: n.r,
+          rotateX: RX, rotateZ: RZ, colors: n.colors,
+          shadow: n.id !== 'platform', shadowOpacity: 0.35, id: `sc-${n.id}`
+        })
+        const [ox, oy] = at(n.x, n.y, n.z)
+
+        // 顶面标签：用顶面平面的仿射矩阵，让文字「贴」在面上
+        let label = ''
+        if (n.label) {
+          const u = projectPoint(1, 0, 0, RX, RZ)
+          const v = projectPoint(0, 1, 0, RX, RZ)
+          const o = projectPoint(n.w / 2, n.h / 2, n.d, RX, RZ)
+          label = `<text transform="matrix(${u[0]} ${u[1]} ${v[0]} ${v[1]} ${o[0]} ${o[1]})"
+                     text-anchor="middle" dominant-baseline="middle"
+                     font-size="22" font-weight="600" fill="rgba(255,255,255,0.92)"
+                     style="pointer-events:none">${n.label}</text>`
+        }
+        parts.push({
+          afterLines: n.id !== 'platform',
+          markup: `<g class="node-group" transform="translate(${ox} ${oy})">${box.markup}${label}</g>`
+        })
+      }
+
+      const under = parts.filter(p => !p.afterLines).map(p => p.markup).join('')
+      const over = parts.filter(p => p.afterLines).map(p => p.markup).join('')
+
+      // 视口：取所有节点角点投影的包围盒
+      let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9
+      for (const n of nodes) {
+        for (const [x, y, z] of [
+          [n.x, n.y, n.z], [n.x + n.w, n.y, n.z], [n.x, n.y + n.h, n.z], [n.x + n.w, n.y + n.h, n.z],
+          [n.x, n.y, n.z + n.d], [n.x + n.w, n.y, n.z + n.d], [n.x, n.y + n.h, n.z + n.d], [n.x + n.w, n.y + n.h, n.z + n.d]
+        ]) {
+          const [sx, sy] = at(x, y, z)
+          minX = Math.min(minX, sx); maxX = Math.max(maxX, sx)
+          minY = Math.min(minY, sy); maxY = Math.max(maxY, sy)
+        }
+      }
+      const pad = 40
+      document.getElementById('scene-holder').innerHTML =
+        `<svg xmlns="http://www.w3.org/2000/svg"
+              viewBox="${minX - pad} ${minY - pad} ${maxX - minX + pad * 2} ${maxY - minY + pad * 2}">
+           ${under}${linesMarkup}${over}
+         </svg>`
+    }
+    buildScene()
+  </script>
+</body>
+</html>

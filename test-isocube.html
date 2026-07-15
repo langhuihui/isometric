@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { margin: 0; overflow: hidden; background: #f0f0f0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    .scene {
+      width: 0; height: 0;
+      transform-style: preserve-3d;
+      transform: rotateX(60deg) rotateZ(-45deg);
+    }
+    .cube {
+      position: absolute;
+      transform-style: preserve-3d;
+      --entity-width: 100px;
+      --entity-height: 150px;
+      --entity-depth: 50px;
+      --entity-radius: 20px;
+      --entity-top-color: #4CAF50;
+      --entity-front-color: #388E3C;
+      --entity-right-color: #2E7D32;
+    }
+    .face {
+      position: absolute;
+      box-sizing: border-box;
+    }
+    .face-top {
+      width: var(--entity-width);
+      height: var(--entity-height);
+      background: var(--entity-top-color);
+      transform: translateZ(var(--entity-depth));
+      border-radius: var(--entity-radius);
+    }
+    .face-front {
+      width: calc(var(--entity-width) - 2 * var(--entity-radius));
+      height: var(--entity-depth);
+      background: var(--entity-front-color);
+      transform: 
+        translateX(var(--entity-radius))
+        rotateX(-90deg)
+        translateY(calc(0px - var(--entity-depth) / 2))
+        translateZ(calc(var(--entity-height) - var(--entity-depth) / 2));
+    }
+    .face-right {
+      width: calc(var(--entity-height) - 2 * var(--entity-radius));
+      height: var(--entity-depth);
+      background: var(--entity-right-color);
+      transform: 
+        translateX(var(--entity-radius))
+        rotateY(90deg)
+        rotateZ(-90deg)
+        translateZ(calc(var(--entity-width) - var(--entity-height) / 2))
+        translateY(calc(0px - var(--entity-depth) / 2))
+        translateX(calc(var(--entity-depth) / 2 - var(--entity-height) / 2));
+    }
+    .corner {
+      position: absolute;
+      box-sizing: border-box;
+      transform-origin: top left;
+      width: calc(var(--entity-radius) * 1.414);
+      height: var(--entity-depth);
+    }
+    .corner-fr {
+      background: linear-gradient(to right, var(--entity-front-color), var(--entity-right-color));
+      transform: translate3d(calc(var(--entity-width) - var(--entity-radius)), var(--entity-height), var(--entity-depth)) rotateX(-90deg) rotateY(-45deg);
+    }
+  </style>
+</head>
+<body>
+  <div class="scene">
+    <div class="cube">
+      <div class="face face-top"></div>
+      <div class="face face-front"></div>
+      <div class="face face-right"></div>
+      <div class="corner corner-fr"></div>
+    </div>
+  </div>
+</body>
+</html>

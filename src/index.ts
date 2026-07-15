@@ -13,9 +13,14 @@ export { Tooltip } from './components/Tooltip'
 export { CubeRenderer } from './components/CubeRenderer'
 export { PathCalculator } from './components/PathCalculator'
 
+// SVG 圆角立方体渲染器
+export { renderRoundedBox, createRoundedBoxSvg, projectPoint, viewDepth } from './core/RoundedBox'
+export type { RoundedBoxOptions, RoundedBoxResult } from './core/RoundedBox'
+
 // Web Components (声明式组件)
 export { IsoEntity, type FaceType, type PositionType } from './components/IsoEntity'
 export { IsoCube } from './components/IsoCube'
+export { IsoRoundedCube } from './components/IsoRoundedCube'
 export { IsoPlane } from './components/IsoPlane'
 export { IsoConsoleFront, IsoConsoleRight } from './components/IsoConsole'
 export { IsoConnector } from './components/IsoConnector'

@@ -127,6 +127,10 @@
       <label>RotateZ: <span class="value" id="rzVal">45</span>°</label>
       <input type="range" id="rotateZ" min="0" max="90" value="45">
     </div>
+    <div class="control-group">
+      <label>Radius: <span class="value" id="rVal">0</span>px</label>
+      <input type="range" id="radius" min="0" max="50" value="0">
+    </div>
   </div>
 
   <div class="scene-container">
@@ -154,7 +158,8 @@
       height: document.getElementById('height'),
       depth: document.getElementById('depth'),
       rotateX: document.getElementById('rotateX'),
-      rotateZ: document.getElementById('rotateZ')
+      rotateZ: document.getElementById('rotateZ'),
+      radius: document.getElementById('radius')
     }
 
     const values = {
@@ -162,7 +167,8 @@
       hVal: document.getElementById('hVal'),
       dVal: document.getElementById('dVal'),
       rxVal: document.getElementById('rxVal'),
-      rzVal: document.getElementById('rzVal')
+      rzVal: document.getElementById('rzVal'),
+      rVal: document.getElementById('rVal')
     }
 
     function update() {
@@ -171,16 +177,19 @@
       const d = inputs.depth.value
       const rx = inputs.rotateX.value
       const rz = inputs.rotateZ.value
+      const r = inputs.radius.value
 
       values.wVal.textContent = w
       values.hVal.textContent = h
       values.dVal.textContent = d
       values.rxVal.textContent = rx
       values.rzVal.textContent = rz
+      values.rVal.textContent = r
 
       cube.setAttribute('width', w)
       cube.setAttribute('height', h)
       cube.setAttribute('depth', d)
+      cube.setAttribute('radius', r)
 
       sceneInner.style.transform = `rotateX(${rx}deg) rotateZ(${rz}deg)`
     }
