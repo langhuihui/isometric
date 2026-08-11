@@ -536,6 +536,7 @@ export function renderSvgScene(options: SceneRenderOptions = {}): string {
     const box = renderRoundedBox({
       width: n.w, height: n.h, depth: n.d, radius: n.r,
       rotateX: rx, rotateZ: rz, colors: n.colors,
+      material: n.layer === 'entity' || !n.layer ? 'plastic' : undefined,
       shadow: n.shadow !== false && n.layer !== 'shell' && n.layer !== 'platform',
       rim: n.rim !== false,
       shadowOpacity: 0.28,

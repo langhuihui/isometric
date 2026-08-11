@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>圆角立方体 SVG 渲染 Demo</title>
+  <title>圆角盒 / 圆柱 SVG 渲染 Demo</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -31,7 +31,26 @@
     /* ---------- 调参区 ---------- */
     .playground { display: flex; gap: 24px; flex-wrap: wrap; }
 
-    .controls { width: 280px; display: flex; flex-direction: column; gap: 10px; }
+    .controls { width: 300px; display: flex; flex-direction: column; gap: 10px; max-height: 520px; overflow-y: auto; padding-right: 4px; }
+    .ctl-group { font-size: 11px; color: #7a7ab0; letter-spacing: .04em; text-transform: uppercase; margin: 6px 0 2px; }
+    .shape-tabs { display: flex; gap: 4px; }
+    .shape-tabs button {
+      flex: 1; background: #26264d; color: #c6c6ee; border: 1px solid #3a3a70;
+      border-radius: 6px; padding: 6px 8px; font-size: 12px; cursor: pointer;
+    }
+    .shape-tabs button.on { background: #3a3a80; border-color: #667eea; color: #fff; }
+    #derive-faces {
+      background: #26264d; color: #c6c6ee; border: 1px solid #3a3a70;
+      border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer;
+    }
+    .anchor-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 4px; }
+    .anchor-cell {
+      background: #15152f; border: 1px solid #2b2b55; border-radius: 8px;
+      padding: 6px 2px 4px; text-align: center; cursor: pointer;
+    }
+    .anchor-cell.on { border-color: #667eea; background: #1e1e48; }
+    .anchor-cell svg { display: block; margin: 0 auto; }
+    .anchor-cell span { display: block; font-size: 10px; color: #8a8ab8; margin-top: 2px; }
     .ctl { display: flex; align-items: center; gap: 8px; font-size: 13px; }
     .ctl label { width: 88px; color: #9a9ac0; flex-shrink: 0; }
     .ctl input[type="range"] { flex: 1; accent-color: #667eea; }
@@ -82,12 +101,10 @@
   </style>
 </head>
 <body>
-  <h1>圆角立方体 · 纯 SVG 程序化渲染</h1>
+  <h1>圆角盒 / 圆柱 · 纯 SVG 程序化渲染</h1>
   <p class="subtitle">
-    水平方向圆角（四条垂直棱倒角），上下边缘锐利。
-    顶面轮廓 = 圆角矩形贝塞尔控制点直接投影（仿射不变，精确）；
-    侧面 = 一条路径 + 一个水平渐变（stop 位置为各母线的精确屏幕坐标）。
-    全矢量输出，无 Canvas / WebGL。
+    水平圆角立方体与竖直圆柱（含椭圆柱），正交投影 + 贝塞尔仿射不变。
+    可调顶面高光、侧面高光、AO、描边、发光、斜切；锚点 11 种样式。全矢量，无 Canvas / WebGL。
   </p>
 
   <div class="layout">
@@ -96,27 +113,65 @@
       <h2>参数调试</h2>
       <div class="playground">
         <div class="controls">
-          <div class="ctl"><label>Width (X)</label><input type="range" id="w" min="20" max="240" value="140"><span class="val" id="w-v"></span></div>
-          <div class="ctl"><label>Height (Y)</label><input type="range" id="h" min="20" max="240" value="140"><span class="val" id="h-v"></span></div>
+          <div class="shape-tabs">
+            <button type="button" id="shape-box" class="on">圆角盒</button>
+            <button type="button" id="shape-cyl">圆柱</button>
+          </div>
+          <div class="ctl-group">几何</div>
+          <div class="ctl box-only"><label>Width (X)</label><input type="range" id="w" min="20" max="240" value="140"><span class="val" id="w-v"></span></div>
+          <div class="ctl box-only"><label>Height (Y)</label><input type="range" id="h" min="20" max="240" value="140"><span class="val" id="h-v"></span></div>
+          <div class="ctl cyl-only" hidden><label>Radius X</label><input type="range" id="rxr" min="12" max="140" value="56"><span class="val" id="rxr-v"></span></div>
+          <div class="ctl cyl-only" hidden><label>Radius Y</label><input type="range" id="ryr" min="12" max="140" value="56"><span class="val" id="ryr-v"></span></div>
           <div class="ctl"><label>Depth (Z)</label><input type="range" id="d" min="20" max="240" value="96"><span class="val" id="d-v"></span></div>
-          <div class="ctl"><label>Radius</label><input type="range" id="r" min="0" max="120" value="28"><span class="val" id="r-v"></span></div>
+          <div class="ctl box-only"><label>Radius</label><input type="range" id="r" min="0" max="120" value="28"><span class="val" id="r-v"></span></div>
           <div class="ctl"><label>RotateX</label><input type="range" id="rx" min="10" max="85" value="60"><span class="val" id="rx-v"></span></div>
           <div class="ctl"><label>RotateZ</label><input type="range" id="rz" min="5" max="85" value="45"><span class="val" id="rz-v"></span></div>
-          <div class="ctl"><label>渐变 stops</label><input type="range" id="stops" min="2" max="16" value="8"><span class="val" id="stops-v"></span></div>
+          <div class="ctl"><label>渐变 stops</label><input type="range" id="stops" min="2" max="24" value="8"><span class="val" id="stops-v"></span></div>
+          <div class="ctl cyl-only" hidden><label>腰线</label><input type="range" id="rings" min="0" max="8" value="2"><span class="val" id="rings-v"></span></div>
+          <div class="ctl cyl-only" hidden><label>顶面环</label><input type="range" id="top-rings" min="0" max="6" value="0"><span class="val" id="top-rings-v"></span></div>
           <div class="ctl">
             <label>颜色</label>
             <input type="color" id="c-top" value="#7fa8ef" title="顶面">
             <input type="color" id="c-front" value="#4f7fd9" title="前面">
             <input type="color" id="c-right" value="#3763b0" title="右面">
           </div>
+          <div class="ctl">
+            <label>主色</label>
+            <input type="color" id="c-base" value="#4f7fd9" title="主色">
+            <button type="button" id="derive-faces">派生三面</button>
+          </div>
+          <div class="ctl-group">外观</div>
+          <div class="shape-tabs" style="margin-bottom:8px">
+            <button type="button" data-mat="" class="on">自定义</button>
+            <button type="button" data-mat="matte">哑光</button>
+            <button type="button" data-mat="plastic">塑料</button>
+            <button type="button" data-mat="glass">玻璃</button>
+            <button type="button" data-mat="metal">金属</button>
+          </div>
+          <div class="ctl"><label>顶面高光</label><input type="range" id="thi" min="0" max="100" value="0"><span class="val" id="thi-v"></span></div>
+          <div class="ctl"><label>侧面高光</label><input type="range" id="spec" min="0" max="100" value="0"><span class="val" id="spec-v"></span></div>
+          <div class="ctl"><label>暗面</label><input type="range" id="shade" min="20" max="100" value="62"><span class="val" id="shade-v"></span></div>
+          <div class="ctl"><label>透明度</label><input type="range" id="op" min="15" max="100" value="100"><span class="val" id="op-v"></span></div>
+          <div class="ctl"><label>描边</label><input type="checkbox" id="do-stroke"><input type="color" id="c-stroke" value="#e8eeff"></div>
+          <div class="ctl"><label>描边宽</label><input type="range" id="sw" min="0.5" max="5" step="0.1" value="1.4"><span class="val" id="sw-v"></span></div>
           <div class="ctl"><label>阴影</label><input type="checkbox" id="shadow" checked></div>
           <div class="ctl"><label>边缘高光</label><input type="checkbox" id="rim" checked></div>
+          <div class="ctl"><label>AO</label><input type="checkbox" id="ao"></div>
+          <div class="ctl"><label>斜切</label><input type="checkbox" id="bevel"></div>
+          <div class="ctl"><label>发光</label><input type="checkbox" id="glow"><input type="color" id="c-glow" value="#7fa8ef"></div>
+          <div class="ctl-group">锚点</div>
+          <div class="ctl"><label>显示锚点</label><input type="checkbox" id="show-anc"></div>
+          <div class="anchor-grid" id="anchor-grid"></div>
           <div class="presets">
-            <button data-preset="device">电源盒(参考图)</button>
+            <button data-preset="device">电源盒</button>
             <button data-preset="chip">扁平芯片</button>
             <button data-preset="tower">机柜</button>
-            <button data-preset="pill">胶囊(r=max)</button>
-            <button data-preset="sharp">直角对照</button>
+            <button data-preset="pill">胶囊</button>
+            <button data-preset="sharp">直角</button>
+            <button data-preset="glass">玻璃</button>
+            <button data-preset="db">数据库</button>
+            <button data-preset="barrel">桶</button>
+            <button data-preset="coin">硬币</button>
           </div>
           <div class="meta" id="meta"></div>
         </div>
@@ -126,25 +181,34 @@
 
     <!-- ==================== 声明式组件 ==================== -->
     <div class="panel">
-      <h2>声明式用法 · &lt;iso-rounded-cube&gt;</h2>
+      <h2>声明式用法 · &lt;iso-rounded-cube&gt; / &lt;iso-cylinder&gt;</h2>
       <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap">
-        <iso-rounded-cube width="130" height="130" depth="44" radius="40" shadow
-          top-color="#1c1626" front-color="#8a5cf6" right-color="#5b34c4"></iso-rounded-cube>
-        <iso-rounded-cube width="110" height="110" depth="90" radius="26" shadow
-          top-color="#8fe3b8" front-color="#54bd8b" right-color="#3a9a6e"></iso-rounded-cube>
-        <iso-rounded-cube width="120" height="80" depth="60" radius="40" shadow
-          top-color="#ffd47f" front-color="#e8a94f" right-color="#c4842e"></iso-rounded-cube>
+        <iso-rounded-cube width="130" height="130" depth="44" radius="40"
+          color="#8a5cf6" material="plastic" shadow
+          top-color="#1c1626" show-anchors anchor-style="ring"></iso-rounded-cube>
+        <iso-rounded-cube width="110" height="110" depth="90" radius="26"
+          color="#54bd8b" material="plastic" shadow></iso-rounded-cube>
+        <iso-cylinder radius="48" depth="110" rings="2"
+          color="#4fa8c4" material="plastic" shadow
+          show-anchors anchor-style="double"></iso-cylinder>
+        <iso-cylinder radius-x="58" radius-y="36" depth="40"
+          color="#e8a94f" material="metal" shadow top-rings="2"></iso-cylinder>
       </div>
-      <pre style="margin-top:14px; background:#12122b; border-radius:8px; padding:12px; font-size:12px; color:#9fd8ff; overflow:auto">&lt;iso-rounded-cube width="130" height="130" depth="44" radius="40" shadow
-  top-color="#1c1626" front-color="#8a5cf6" right-color="#5b34c4"&gt;
-&lt;/iso-rounded-cube&gt;</pre>
+      <pre style="margin-top:14px; background:#12122b; border-radius:8px; padding:12px; font-size:12px; color:#9fd8ff; overflow:auto">&lt;iso-rounded-cube width="130" height="130" depth="44" radius="40"
+  color="#8a5cf6" material="plastic" shadow top-color="#1c1626"
+  show-anchors anchor-style="ring"&gt;
+&lt;/iso-rounded-cube&gt;
+&lt;iso-cylinder radius="48" depth="110" rings="2"
+  color="#4fa8c4" material="plastic" shadow
+  show-anchors anchor-style="double"&gt;
+&lt;/iso-cylinder&gt;</pre>
     </div>
 
     <!-- ==================== 组合场景 ==================== -->
     <div class="panel scene-panel">
       <h2>组合场景 · 用引擎 API 生成的架构图</h2>
       <p class="subtitle" style="margin-bottom:12px">
-        每个节点都是一次 <code class="inline">renderRoundedBox()</code> 调用，
+        节点由 <code class="inline">renderRoundedBox()</code> / <code class="inline">renderCylinder()</code> 生成，
         通过 <code class="inline">projectPoint()</code> 摆放世界坐标、
         <code class="inline">viewDepth()</code> 做遮挡排序，连线与标签为普通 SVG 元素。
       </p>
@@ -154,68 +218,12 @@
 
   <script type="module">
     import { renderRoundedBox, projectPoint, viewDepth } from './src/core/RoundedBox'
+    import { renderCylinder } from './src/core/Cylinder'
+    import { initShapePlayground } from './src/playground'
     import './src/components/IsoRoundedCube.ts'
+    import './src/components/IsoCylinder.ts'
 
-    // ================= 参数调试区 =================
-    const $ = id => document.getElementById(id)
-    const sliders = ['w', 'h', 'd', 'r', 'rx', 'rz', 'stops']
-    const stage = $('stage')
-
-    function currentOptions() {
-      return {
-        width: +$('w').value,
-        height: +$('h').value,
-        depth: +$('d').value,
-        radius: +$('r').value,
-        rotateX: +$('rx').value,
-        rotateZ: +$('rz').value,
-        gradientStops: +$('stops').value,
-        shadow: $('shadow').checked,
-        rim: $('rim').checked,
-        colors: {
-          top: $('c-top').value,
-          front: $('c-front').value,
-          right: $('c-right').value
-        }
-      }
-    }
-
-    function refresh() {
-      for (const id of sliders) $(id + '-v').textContent = $(id).value
-      const t0 = performance.now()
-      const result = renderRoundedBox(currentOptions())
-      const ms = (performance.now() - t0).toFixed(2)
-      stage.innerHTML = result.svg
-      const svg = stage.firstElementChild
-      svg.style.maxWidth = '92%'
-      svg.style.maxHeight = '92%'
-      const nodes = svg.querySelectorAll('*').length
-      const kb = (result.svg.length / 1024).toFixed(1)
-      $('meta').innerHTML =
-        `生成耗时 <b>${ms} ms</b> · SVG 节点 <b>${nodes}</b> 个 · 体积 <b>${kb} KB</b><br>` +
-        `圆角半径会自动钳制到 min(W,H)/2，拖到最大试试 →「胶囊柱」形态`
-    }
-
-    const presets = {
-      device: { w: 200, h: 200, d: 56, r: 60, top: '#1c1626', front: '#8a5cf6', right: '#5b34c4' },
-      chip:   { w: 200, h: 200, d: 34, r: 24, top: '#1f2a44', front: '#31415f', right: '#1a2338' },
-      tower:  { w: 90, h: 90, d: 220, r: 26, top: '#e8ebf2', front: '#c3cad8', right: '#9aa4b8' },
-      pill:   { w: 200, h: 120, d: 70, r: 60, top: '#a8e6c8', front: '#5cbf94', right: '#3d9a72' },
-      sharp:  { w: 140, h: 140, d: 96, r: 0, top: '#7fa8ef', front: '#4f7fd9', right: '#3763b0' }
-    }
-    document.querySelectorAll('[data-preset]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const p = presets[btn.dataset.preset]
-        $('w').value = p.w; $('h').value = p.h; $('d').value = p.d; $('r').value = p.r
-        $('c-top').value = p.top; $('c-front').value = p.front; $('c-right').value = p.right
-        refresh()
-      })
-    })
-
-    for (const id of [...sliders, 'c-top', 'c-front', 'c-right', 'shadow', 'rim']) {
-      $(id).addEventListener('input', refresh)
-    }
-    refresh()
+    initShapePlayground()
 
     // ================= 组合场景 =================
     // 一个「客户端 → 网关 → 服务 → 数据库」的小型架构图
@@ -233,9 +241,9 @@
         colors: { top: '#8fe3b8', front: '#54bd8b', right: '#3a9a6e' }, label: '服务 A' },
       { id: 'svc-b', x: 330, y: 20, z: 0, w: 96, h: 96, d: 72, r: 22,
         colors: { top: '#c9a4f2', front: '#9d6fd6', right: '#7c50b4' }, label: '服务 B' },
-      { id: 'db', x: 200, y: -120, z: 0, w: 88, h: 88, d: 120, r: 34,
+      { id: 'db', x: 200, y: -120, z: 0, w: 88, h: 88, d: 120, r: 34, kind: 'cyl', rings: 2,
         colors: { top: '#8ad8e8', front: '#4fa8c4', right: '#3a84a0' }, label: '数据库' },
-      { id: 'cache', x: 380, y: -110, z: 0, w: 70, h: 70, d: 46, r: 18,
+      { id: 'cache', x: 380, y: -110, z: 0, w: 70, h: 70, d: 46, r: 18, kind: 'cyl', rings: 0,
         colors: { top: '#f79a9a', front: '#d96a6a', right: '#b44c4c' }, label: '缓存' }
     ]
 
@@ -269,11 +277,19 @@
       }).join('')
 
       for (const n of sorted) {
-        const box = renderRoundedBox({
-          width: n.w, height: n.h, depth: n.d, radius: n.r,
-          rotateX: RX, rotateZ: RZ, colors: n.colors,
-          shadow: n.id !== 'platform', shadowOpacity: 0.35, id: `sc-${n.id}`
-        })
+        const box = n.kind === 'cyl'
+          ? renderCylinder({
+              radiusX: n.w / 2, radiusY: n.h / 2, depth: n.d, rings: n.rings ?? 2,
+              rotateX: RX, rotateZ: RZ, colors: n.colors,
+              material: 'plastic',
+              shadow: n.id !== 'platform', shadowOpacity: 0.35, id: `sc-${n.id}`
+            })
+          : renderRoundedBox({
+              width: n.w, height: n.h, depth: n.d, radius: n.r,
+              rotateX: RX, rotateZ: RZ, colors: n.colors,
+              material: n.id === 'platform' ? undefined : 'plastic',
+              shadow: n.id !== 'platform', shadowOpacity: 0.35, id: `sc-${n.id}`
+            })
         const [ox, oy] = at(n.x, n.y, n.z)
 
         // 顶面标签：用顶面平面的仿射矩阵，让文字「贴」在面上

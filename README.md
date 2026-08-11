@@ -4,7 +4,7 @@
 
 | 路径 | 技术 | 适用 |
 |------|------|------|
-| **SVG RoundedBox（推荐）** | 正交投影 + 纯 SVG | 水平圆角立方体、组合架构图、发 npm 后命令式拼场景 |
+| **SVG RoundedBox / Cylinder（推荐）** | 正交投影 + 纯 SVG | 水平圆角立方体、圆柱、锚点、组合架构图 |
 | CSS 3D Web Components | Lit + CSS 3D Transform | 直角立方体、插槽贴面内容、原有 `<iso-scene>` 生态 |
 
 无需 Canvas / WebGL。
@@ -26,10 +26,12 @@ npm publish  # 需已登录 npm；包名 iso-engine
 ```ts
 import {
   renderRoundedBox,
-  createRoundedBoxSvg,
+  renderCylinder,
+  renderAnchor,
   projectPoint,
   viewDepth,
-  IsoRoundedCube, // 副作用：注册 <iso-rounded-cube>
+  IsoRoundedCube, // 注册 <iso-rounded-cube>
+  IsoCylinder,    // 注册 <iso-cylinder>
 } from 'iso-engine'
 ```
 
@@ -45,14 +47,11 @@ const { svg } = renderRoundedBox({
   height: 140,
   depth: 80,
   radius: 28,          // 仅水平圆角；上下棱保持锐利
+  color: '#4f7fd9',    // 主色，自动派生顶/前/右
+  material: 'plastic', // matte | plastic | glass | metal
   rotateX: 60,
   rotateZ: 45,
   shadow: true,
-  colors: {
-    top: '#7fa8ef',
-    front: '#4f7fd9',
-    right: '#3763b0',
-  },
 })
 
 document.getElementById('box').innerHTML = svg
@@ -67,8 +66,8 @@ document.getElementById('box').innerHTML = svg
 
 <iso-rounded-cube
   width="130" height="130" depth="44" radius="40"
-  top-color="#1c1626" front-color="#8a5cf6" right-color="#5b34c4"
-  shadow>
+  color="#8a5cf6" material="plastic" shadow
+  top-color="#1c1626">
 </iso-rounded-cube>
 ```
 
@@ -76,11 +75,27 @@ document.getElementById('box').innerHTML = svg
 |------|------|
 | `width` / `height` / `depth` | X / Y / Z 尺寸 |
 | `radius` | 水平圆角，自动钳制到 `min(W,H)/2` |
-| `top-color` / `front-color` / `right-color` | 三面颜色（支持 rgba） |
+| `color` | 主色；未填三面时自动派生（顶亮暖、右暗冷） |
+| `material` | `matte` / `plastic` / `glass` / `metal` |
+| `top-color` / `front-color` / `right-color` | 三面颜色（支持 rgba；可覆盖派生） |
 | `rotate-x` / `rotate-z` | 投影俯仰 / 水平旋转 |
-| `shadow` | 地面软阴影 |
+| `shadow` | 接触阴影 + 方向投射阴影 |
 | `no-rim` | 关闭顶面边缘高光 |
+| `top-highlight` / `specular` / `shade` | 顶面径向高光、侧面高光、暗面倍率 |
+| `ao` / `bevel` / `glow` | 底部遮蔽、顶面斜切、外发光 |
+| `stroke` / `stroke-width` | 轮廓描边 |
+| `show-anchors` / `anchor-style` | 显示顶/前/右锚点；样式见下 |
 | `scale` | 显示缩放 |
+
+圆柱：
+
+```html
+<iso-cylinder radius="48" depth="110" rings="2"
+  color="#4fa8c4" material="plastic" shadow>
+</iso-cylinder>
+```
+
+`radius-x` / `radius-y` 可画椭圆柱；`rings` / `top-rings` 为腰线与顶面同心环。
 
 > `<iso-rounded-cube>` 输出的是**已投影的平面 SVG**，不要再放进 CSS 3D 的 `<iso-scene>` 里（会被二次变换）。
 
@@ -130,12 +145,28 @@ function renderRoundedBox(options?: RoundedBoxOptions): RoundedBoxResult
 |------|------|------|
 | `width` / `height` / `depth` | 100 | 尺寸 |
 | `radius` | 16 | 水平圆角 |
-| `colors.top/front/right` | 蓝色系 | 面色 |
+| `color` / `material` | — | 主色派生三面；`matte` `plastic` `glass` `metal` |
+| `colors.top/front/right` | 蓝色系 | 面色（覆盖派生） |
 | `rotateX` / `rotateZ` | 60 / 45 | 投影角 |
 | `gradientStops` | 8 | 侧面渐变采样密度 |
-| `rim` | true | 顶边高光 |
-| `shadow` | false | 软阴影 |
+| `rim` / `rimWidth` | true / 1.2 | 顶边高光 |
+| `shadow` / `shadowCast` | false / 1 | 接触 + 投射阴影；`shadowCast=0` 仅接触 |
+| `topHighlight` / `specular` / `shade` | 0 / 0 / 0.62 | 顶面高光、侧面高光、暗面 |
+| `ao` / `bevel` / `glow` | false | AO、斜切、发光 |
+| `stroke` / `opacity` | — / 1 | 描边与透明度 |
+| `anchors` | — | `{ face, position, style }[]` |
 | `id` | 自动 | 渐变/滤镜 id 前缀（场景内须唯一） |
+
+锚点样式：`dot` `ring` `double` `diamond` `square` `plus` `cross` `pin` `arrow` `hex` `dash`。
+
+```js
+import { renderCylinder } from 'iso-engine'
+
+const { svg } = renderCylinder({
+  radius: 48, depth: 110, rings: 2,
+  color: '#4fa8c4', material: 'plastic', shadow: true,
+})
+```
 
 **返回值**
 
@@ -149,9 +180,12 @@ function renderRoundedBox(options?: RoundedBoxOptions): RoundedBoxResult
 
 另导出：
 
-- `createRoundedBoxSvg(options)` → `SVGSVGElement`
+- `createRoundedBoxSvg(options)` / `createCylinderSvg(options)` → `SVGSVGElement`
+- `renderAnchor(x, y, { style, size, color, glow })` → SVG markup
 - `projectPoint(x, y, z, rotateX?, rotateZ?)` → `[sx, sy]`
 - `viewDepth(x, y, z, rotateX?, rotateZ?)` → number（越大越近）
+- `deriveFaceColors(base, shade?)` → `{ top, front, right }`
+- `MATERIALS` / `applyMaterial(options)` — 材质预设
 
 ## CSS 3D 路径（直角立方体 / 插槽内容）
 
@@ -195,6 +229,7 @@ scene.addEntity(e1)
 - `<iso-scene>` — CSS 3D 场景容器  
 - `<iso-cube>` — 直角立方体（slots: `top` / `front` / `right`）  
 - `<iso-rounded-cube>` — SVG 圆角盒（见上）  
+- `<iso-cylinder>` — SVG 圆柱 / 椭圆柱  
 - `<iso-connector>` — 连线（`from`/`to`、`route`、`animation`、`particles`）  
 - `<iso-console-front>` / `<iso-console-right>`、`<iso-plane>`
 
@@ -219,7 +254,7 @@ window.dispatchEvent(new CustomEvent('iso-angles-changed', {
 
 ```bash
 pnpm install
-pnpm dev      # http://localhost:5373  — index.html / demo-rounded.html
+pnpm dev      # http://localhost:5373  官网首页（形体工坊 + Monibuca 面板）
 pnpm build    # 生成 dist/，供 npm 发布
 ```
 

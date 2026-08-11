@@ -22,104 +22,36 @@
  *    该面纯色，在圆角圆柱上按 cos²/sin² 平滑插值，接缝处颜色严格连续。
  */
 
-// ---------------------------------------------------------------------------
-// 基础类型与工具
-// ---------------------------------------------------------------------------
+import { maxAnchorExtent, renderAnchorsAt, type ShapeAnchor } from './Anchor'
+import {
+  type IsoShapeResult,
+  type IsoShapeStyle,
+  type RGBA,
+  type Vec2,
+  RAD,
+  aoGradientDef,
+  applyMaterial,
+  applySpecular,
+  boxFacePoint,
+  boundsOf,
+  cssColor,
+  fmt,
+  glowFilterDef,
+  groundShadowMarkup,
+  makeProjection,
+  resolveFaceColors,
+  shadeColor,
+  shadowOffset,
+  styleMargin,
+  topHighlightGradientDef,
+  towardWhite,
+  wrapSvg
+} from './isoSvg'
 
-export type Vec3 = [number, number, number]
-export type Vec2 = [number, number]
+export type { Vec2, Vec3 } from './isoSvg'
+export { projectPoint, viewDepth } from './isoSvg'
 
-const RAD = Math.PI / 180
-const dot3 = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-
-/** 数字格式化（截断到 0.01px，减小输出体积） */
-const fmt = (n: number): string => {
-  const v = Math.round(n * 100) / 100
-  return Object.is(v, -0) ? '0' : String(v)
-}
-
-// ---------------------------------------------------------------------------
-// 颜色工具（支持 #rgb/#rrggbb/#rrggbbaa/rgb()/rgba()，含透明度）
-// ---------------------------------------------------------------------------
-
-interface RGBA { r: number; g: number; b: number; a: number }
-
-function parseColor(input: string): RGBA {
-  const s = (input || '').trim()
-  if (s.startsWith('#')) {
-    let hex = s.slice(1)
-    if (hex.length === 3 || hex.length === 4) hex = hex.split('').map(c => c + c).join('')
-    const num = parseInt(hex.slice(0, 6), 16)
-    if (!Number.isNaN(num)) {
-      const a = hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1
-      return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255, a }
-    }
-  }
-  const m = s.match(/rgba?\(([^)]+)\)/i)
-  if (m) {
-    const p = m[1].split(',').map(t => parseFloat(t))
-    return { r: p[0] || 0, g: p[1] || 0, b: p[2] || 0, a: p.length > 3 ? p[3] : 1 }
-  }
-  return { r: 136, g: 136, b: 136, a: 1 }
-}
-
-function cssColor(c: RGBA): string {
-  const r = Math.round(Math.max(0, Math.min(255, c.r)))
-  const g = Math.round(Math.max(0, Math.min(255, c.g)))
-  const b = Math.round(Math.max(0, Math.min(255, c.b)))
-  if (c.a >= 0.999) {
-    return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`
-  }
-  return `rgba(${r},${g},${b},${Math.round(c.a * 1000) / 1000})`
-}
-
-const shadeColor = (c: RGBA, f: number): RGBA => ({ r: c.r * f, g: c.g * f, b: c.b * f, a: c.a })
-const towardWhite = (c: RGBA, t: number): RGBA => ({
-  r: c.r + (255 - c.r) * t,
-  g: c.g + (255 - c.g) * t,
-  b: c.b + (255 - c.b) * t,
-  a: c.a
-})
-
-// ---------------------------------------------------------------------------
-// 正交投影
-// ---------------------------------------------------------------------------
-
-interface Projection {
-  view: Vec3
-  project(p: Vec3): Vec2
-}
-
-function makeProjection(rotateXDeg: number, rotateZDeg: number): Projection {
-  // 避开完全边缘正对的退化角度
-  const a = Math.max(1, Math.min(89, rotateXDeg)) * RAD
-  const b = Math.max(1, Math.min(89, rotateZDeg)) * RAD
-  const cosB = Math.cos(b), sinB = Math.sin(b)
-  const cosA = Math.cos(a), sinA = Math.sin(a)
-  return {
-    view: [sinA * sinB, sinA * cosB, cosA],
-    project: (p: Vec3): Vec2 => [
-      p[0] * cosB - p[1] * sinB,
-      (p[0] * sinB + p[1] * cosB) * cosA - p[2] * sinA
-    ]
-  }
-}
-
-/** 把模型/世界坐标投影到屏幕坐标（用于场景内摆放多个物体） */
-export function projectPoint(x: number, y: number, z: number, rotateX = 60, rotateZ = 45): Vec2 {
-  return makeProjection(rotateX, rotateZ).project([x, y, z])
-}
-
-/** 观察深度（越大越靠近观察者，用于多物体的画家算法排序） */
-export function viewDepth(x: number, y: number, z: number, rotateX = 60, rotateZ = 45): number {
-  return dot3([x, y, z], makeProjection(rotateX, rotateZ).view)
-}
-
-// ---------------------------------------------------------------------------
-// 选项与结果
-// ---------------------------------------------------------------------------
-
-export interface RoundedBoxOptions {
+export interface RoundedBoxOptions extends IsoShapeStyle {
   /** X 方向尺寸（向右下） */
   width?: number
   /** Y 方向尺寸（向左下，俯视纵深） */
@@ -133,34 +65,17 @@ export interface RoundedBoxOptions {
   rotateZ?: number
   /** 每个圆角的渐变采样数，默认 8 */
   gradientStops?: number
-  /** 顶面边缘高光 */
-  rim?: boolean
-  /** 是否绘制地面软阴影 */
-  shadow?: boolean
-  shadowOpacity?: number
   /** 元素 id 前缀（保证渐变 id 唯一），缺省自动生成 */
   id?: string
+  anchors?: ShapeAnchor[]
 }
 
-export interface RoundedBoxResult {
-  /** 完整 <svg> 字符串（自带 viewBox，可直接 innerHTML） */
-  svg: string
-  /** 不含外层 <svg> 的内容（defs + 图形），坐标原点 = 模型 (0,0,0) 的投影，用于组合场景 */
-  markup: string
-  viewBox: { x: number; y: number; width: number; height: number }
-  /** 顶面圆角矩形的投影路径（d 字符串），可用来裁剪/放置顶面内容 */
-  topPath: string
-  /** 该盒使用的投影函数（模型坐标 → 本地屏幕坐标） */
-  project: (x: number, y: number, z: number) => Vec2
-}
-
-// ---------------------------------------------------------------------------
-// 主渲染函数
-// ---------------------------------------------------------------------------
+export type RoundedBoxResult = IsoShapeResult
 
 let uid = 0
 
-export function renderRoundedBox(options: RoundedBoxOptions = {}): RoundedBoxResult {
+export function renderRoundedBox(raw: RoundedBoxOptions = {}): RoundedBoxResult {
+  const options = applyMaterial(raw)
   const W = Math.max(1, options.width ?? 100)
   const H = Math.max(1, options.height ?? 100)
   const D = Math.max(1, options.depth ?? 100)
@@ -172,46 +87,37 @@ export function renderRoundedBox(options: RoundedBoxOptions = {}): RoundedBoxRes
   const rotateZ = options.rotateZ ?? 45
   const P = makeProjection(rotateX, rotateZ)
 
-  // ---- 颜色
-  const cTop = parseColor(options.colors?.top ?? '#7fa8ef')
-  const cFront = parseColor(options.colors?.front ?? '#4f7fd9')
-  const cRight = parseColor(options.colors?.right ?? '#3763b0')
-  const cLeft = shadeColor(cFront, 0.62)
-  const cBack = shadeColor(cRight, 0.62)
+  const shade = options.shade ?? 0.62
+  const { top: cTop, front: cFront, right: cRight } =
+    resolveFaceColors(options.colors, options.color, shade)
+  const cLeft = shadeColor(cFront, shade)
+  const cBack = shadeColor(cRight, shade)
+  const specular = options.specular ?? 0
 
-  /** 统一着色函数：水平法线 (nx, ny) → 侧面颜色 */
   const sideColorAt = (nx: number, ny: number): RGBA => {
     const wx = nx * nx, wy = ny * ny
     const cx = nx >= 0 ? cRight : cLeft
     const cy = ny >= 0 ? cFront : cBack
-    return {
+    const c: RGBA = {
       r: wx * cx.r + wy * cy.r,
       g: wx * cx.g + wy * cy.g,
       b: wx * cx.b + wy * cy.b,
       a: wx * cx.a + wy * cy.a
     }
+    return applySpecular(c, nx, ny, rotateZ, specular)
   }
 
-  // ---- 俯视圆角矩形几何
   const x0 = r, x1 = W - r
   const y0 = r, y1 = H - r
-  // 四个圆角中心与其外法线角度范围（度）：
-  // BL(x0,y0):[180,270]  BR(x1,y0):[270,360]  FR(x1,y1):[0,90]  FL(x0,y1):[90,180]
   const corner = {
     BL: [x0, y0] as Vec2, BR: [x1, y0] as Vec2,
     FR: [x1, y1] as Vec2, FL: [x0, y1] as Vec2
   }
 
-  /** 俯视平面点 (px, py, z) → 屏幕 */
   const pr = (p: Vec2, z: number): Vec2 => P.project([p[0], p[1], z])
-  /** 圆角上角度 φ（度）处的平面点 */
   const arcPt = (c: Vec2, deg: number): Vec2 =>
     [c[0] + r * Math.cos(deg * RAD), c[1] + r * Math.sin(deg * RAD)]
 
-  /**
-   * 生成从 a0 到 a1（度，可正反向）的投影圆弧路径段（不含起点 M/L）。
-   * 平面圆弧 → 三次贝塞尔（仿射不变，投影后依然精确）。
-   */
   const arcSeg = (c: Vec2, a0: number, a1: number, z: number): string => {
     if (r < 0.05 || Math.abs(a1 - a0) < 0.01) {
       const p = pr(arcPt(c, a1), z)
@@ -227,7 +133,6 @@ export function renderRoundedBox(options: RoundedBoxOptions = {}): RoundedBoxRes
       const k = (4 / 3) * Math.tan(half / 2) * r
       const ps = arcPt(c, s)
       const pe = arcPt(c, e)
-      // 切线方向（逆时针参数化的导数，反向弧自动取负）
       const t1: Vec2 = [-Math.sin(s * RAD), Math.cos(s * RAD)]
       const t2: Vec2 = [-Math.sin(e * RAD), Math.cos(e * RAD)]
       const sign = Math.sign(total)
@@ -244,9 +149,6 @@ export function renderRoundedBox(options: RoundedBoxOptions = {}): RoundedBoxRes
     return `L${fmt(q[0])} ${fmt(q[1])}`
   }
 
-  // ------------------------------------------------------------------
-  // 1) 顶面 / 底面轮廓路径（完整圆角矩形）
-  // ------------------------------------------------------------------
   const roundRectPath = (z: number): string => {
     const start = pr([x0, 0], z)
     return `M${fmt(start[0])} ${fmt(start[1])}` +
@@ -258,32 +160,26 @@ export function renderRoundedBox(options: RoundedBoxOptions = {}): RoundedBoxRes
   }
   const topPath = roundRectPath(D)
 
-  // ------------------------------------------------------------------
-  // 2) 可见侧面：单条路径 + 单个水平渐变
-  //    轮廓母线角度：φ_L = 180 − rotateZ，φ_R = 360 − rotateZ
-  // ------------------------------------------------------------------
   const rz = Math.max(1, Math.min(89, rotateZ))
   const phiL = 180 - rz
   const phiR = 360 - rz
 
   const Ltop = pr(arcPt(corner.FL, phiL), D)
   const Rbot = pr(arcPt(corner.BR, phiR), 0)
+  const Rtop = pr(arcPt(corner.BR, phiR), D)
+  const Lbot = pr(arcPt(corner.FL, phiL), 0)
 
-  // 上边缘：φ_L → 前 → 右 → φ_R（沿顶面轮廓）
   const sidePath =
     `M${fmt(Ltop[0])} ${fmt(Ltop[1])}` +
     arcSeg(corner.FL, phiL, 90, D) +
     lineTo([x1, H], D) + arcSeg(corner.FR, 90, 0, D) +
     lineTo([W, y0], D) + arcSeg(corner.BR, 360, phiR, D) +
-    // 右侧轮廓母线（竖直向下）
     `L${fmt(Rbot[0])} ${fmt(Rbot[1])}` +
-    // 下边缘：反向走回
     arcSeg(corner.BR, phiR, 360, 0) +
     lineTo([W, y1], 0) + arcSeg(corner.FR, 0, 90, 0) +
     lineTo([x0, H], 0) + arcSeg(corner.FL, 90, phiL, 0) +
     'Z'
 
-  // ---- 渐变 stop：沿可见轮廓采样母线（screenX 单调递增）
   const sxL = Ltop[0]
   const sxR = Rbot[0]
   const span = sxR - sxL || 1
@@ -317,9 +213,17 @@ export function renderRoundedBox(options: RoundedBoxOptions = {}): RoundedBoxRes
     `<linearGradient id="${pid}-side" gradientUnits="userSpaceOnUse" ` +
     `x1="${fmt(sxL)}" y1="0" x2="${fmt(sxR)}" y2="0">${stops}</linearGradient>`
 
-  // ------------------------------------------------------------------
-  // 3) 顶面边缘高光（可选）：更亮的侧面色沿顶面轮廓描边
-  // ------------------------------------------------------------------
+  const topHi = options.topHighlight ?? 0
+  let topFill = cssColor(cTop)
+  if (topHi > 0) {
+    const center = pr([W / 2, H / 2], D)
+    const far = pr([W, H], D)
+    const rad = Math.hypot(far[0] - center[0], far[1] - center[1]) * 0.95
+    const focal = pr([W * 0.32, H * 0.32], D)
+    defs += topHighlightGradientDef(pid + '-th', center[0], center[1], rad, focal[0], focal[1], cTop, topHi)
+    topFill = `url(#${pid}-th)`
+  }
+
   let rimMarkup = ''
   if (options.rim !== false) {
     let rimStops = ''
@@ -332,56 +236,88 @@ export function renderRoundedBox(options: RoundedBoxOptions = {}): RoundedBoxRes
     }
     defs += `<linearGradient id="${pid}-rim" gradientUnits="userSpaceOnUse" ` +
       `x1="${fmt(sxL)}" y1="0" x2="${fmt(sxR)}" y2="0">${rimStops}</linearGradient>`
+    const rw = options.rimWidth ?? 1.2
+    const ro = options.rimOpacity ?? 0.85
     rimMarkup = `<path d="${topPath}" fill="none" stroke="url(#${pid}-rim)" ` +
-      `stroke-width="1.2" stroke-opacity="0.85" stroke-linejoin="round"/>`
+      `stroke-width="${fmt(rw)}" stroke-opacity="${fmt(ro)}" stroke-linejoin="round"/>`
   }
 
-  // ------------------------------------------------------------------
-  // 4) 地面软阴影（可选）
-  // ------------------------------------------------------------------
   let shadowMarkup = ''
   if (options.shadow) {
-    const blur = Math.max(3, Math.min(12, Math.min(W, H) * 0.05 + 3))
-    defs += `<filter id="${pid}-sh" x="-40%" y="-40%" width="180%" height="180%">` +
-      `<feGaussianBlur stdDeviation="${fmt(blur)}"/></filter>`
-    shadowMarkup = `<path d="${roundRectPath(0)}" fill="#000" ` +
-      `opacity="${options.shadowOpacity ?? 0.3}" filter="url(#${pid}-sh)"/>`
+    const sh = groundShadowMarkup(
+      roundRectPath(0), pid, options, Math.min(W, H),
+      shadowOffset(P.project, D, options.shadowCast ?? 1)
+    )
+    defs += sh.defs
+    shadowMarkup = sh.markup
   }
 
-  // ------------------------------------------------------------------
-  // 5) 组装（侧面 → 顶面 → 高光）
-  // ------------------------------------------------------------------
-  const sideFill = `url(#${pid}-side)`
-  const markup =
-    `<defs>${defs}</defs>` +
-    shadowMarkup +
-    `<path d="${sidePath}" fill="${sideFill}"/>` +
-    `<path d="${topPath}" fill="${cssColor(cTop)}"/>` +
-    rimMarkup
+  const yTop = Math.min(Ltop[1], Rtop[1])
+  const yBot = Math.max(Lbot[1], Rbot[1])
+  let aoMarkup = ''
+  if (options.ao) {
+    defs += aoGradientDef(`${pid}-ao`, yTop, yBot, options.aoStrength ?? 0.32)
+    aoMarkup = `<path d="${sidePath}" fill="url(#${pid}-ao)"/>`
+  }
 
-  // ---- 视口范围：顶/底轮廓采样点包围盒
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  if (options.glow) {
+    defs += glowFilterDef(`${pid}-glow`, options.glowColor ?? cssColor(cFront), options.glowBlur ?? 8)
+  }
+
+  let bevelMarkup = ''
+  if (options.bevel) {
+    const hi = cssColor(towardWhite(cTop, 0.55))
+    bevelMarkup = `<path d="${topPath}" fill="none" stroke="${hi}" ` +
+      `stroke-width="2.2" stroke-opacity="0.38" stroke-linejoin="round"/>`
+  }
+
+  let strokeMarkup = ''
+  if (options.stroke) {
+    const sc = options.stroke
+    const sw = options.strokeWidth ?? 1.4
+    const so = options.strokeOpacity ?? 1
+    strokeMarkup =
+      `<path d="${sidePath}" fill="none" stroke="${sc}" stroke-width="${fmt(sw)}" ` +
+      `stroke-opacity="${fmt(so)}" stroke-linejoin="round"/>` +
+      `<path d="${topPath}" fill="none" stroke="${sc}" stroke-width="${fmt(sw)}" ` +
+      `stroke-opacity="${fmt(so)}" stroke-linejoin="round"/>`
+  }
+
+  let body =
+    `<path d="${sidePath}" fill="url(#${pid}-side)"/>` +
+    aoMarkup +
+    `<path d="${topPath}" fill="${topFill}"/>` +
+    bevelMarkup + rimMarkup + strokeMarkup
+
+  if (options.glow) {
+    body = `<g filter="url(#${pid}-glow)">${body}</g>`
+  }
+
+  const op = options.opacity ?? 1
+  if (op < 0.999) body = `<g opacity="${fmt(op)}">${body}</g>`
+
+  let anchorMarkup = ''
+  if (options.anchors?.length) {
+    const pts = options.anchors.map(a => {
+      const face = a.face === 'side' ? 'front' : a.face
+      const loc = boxFacePoint(W, H, D, face, a.position ?? 'mc')
+      return { p: P.project(loc), opts: a }
+    })
+    anchorMarkup = renderAnchorsAt(pts, pid)
+  }
+
+  const samplePts: Vec2[] = []
   for (const z of [0, D]) {
     for (let deg = 0; deg < 360; deg += 5) {
       const c = deg < 90 ? corner.FR : deg < 180 ? corner.FL : deg < 270 ? corner.BL : corner.BR
-      const p = pr(arcPt(c, deg), z)
-      minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0])
-      minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1])
+      samplePts.push(pr(arcPt(c, deg), z))
     }
   }
-  const margin = options.shadow ? 16 : 2
-  const viewBox = {
-    x: minX - margin, y: minY - margin,
-    width: maxX - minX + margin * 2, height: maxY - minY + margin * 2
-  }
+  const viewBox = boundsOf(samplePts, styleMargin(options, maxAnchorExtent(options.anchors)))
 
-  const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" ` +
-    `viewBox="${fmt(viewBox.x)} ${fmt(viewBox.y)} ${fmt(viewBox.width)} ${fmt(viewBox.height)}" ` +
-    `width="${fmt(viewBox.width)}" height="${fmt(viewBox.height)}">${markup}</svg>`
-
+  const markup = `<defs>${defs}</defs>` + shadowMarkup + body + anchorMarkup
   return {
-    svg,
+    svg: wrapSvg(markup, viewBox),
     markup,
     viewBox,
     topPath,
@@ -389,7 +325,6 @@ export function renderRoundedBox(options: RoundedBoxOptions = {}): RoundedBoxRes
   }
 }
 
-/** 直接创建 SVG DOM 元素（浏览器环境） */
 export function createRoundedBoxSvg(options: RoundedBoxOptions = {}): SVGSVGElement {
   const holder = document.createElement('div')
   holder.innerHTML = renderRoundedBox(options).svg

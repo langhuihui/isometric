@@ -1,24 +1,21 @@
-import { renderRoundedBox } from '../core/RoundedBox'
-import { parseAnchorsAttr, type AnchorStyle } from '../core/Anchor'
+import { renderCylinder } from '../core/Cylinder'
+import { cylinderVisibleAnchors, parseAnchorsAttr, type AnchorStyle } from '../core/Anchor'
 import { isoStyleFromElement } from '../core/isoSvg'
 
 /**
- * <iso-rounded-cube> 圆角立方体 Web Component（SVG 渲染）
+ * <iso-cylinder> 圆柱 / 椭圆柱 Web Component（SVG 渲染）
  *
- * 与 <iso-cube>（CSS 3D）不同，本组件输出的是已完成等距投影的 SVG，
- * 是一个普通的行内元素，不需要放在 3D 变换的场景容器中。
- *
- * 用法：
- *   <iso-rounded-cube width="120" height="120" depth="80" radius="20"
- *                     color="#4f7fd9" material="plastic" shadow>
- *   </iso-rounded-cube>
+ *   <iso-cylinder radius="48" depth="110" rings="2"
+ *                 color="#4fa8c4" material="plastic" shadow>
+ *   </iso-cylinder>
  */
-export class IsoRoundedCube extends HTMLElement {
+export class IsoCylinder extends HTMLElement {
   static observedAttributes = [
-    'width', 'height', 'depth', 'radius',
-    'top-color', 'front-color', 'right-color', 'color', 'material',
+    'radius', 'radius-x', 'radius-y', 'depth',
+    'top-color', 'front-color', 'right-color', 'side-color', 'color', 'material',
     'rotate-x', 'rotate-z', 'gradient-stops',
     'shadow', 'no-shadow', 'no-rim', 'scale',
+    'rings', 'ring-color', 'ring-width', 'top-rings',
     'stroke', 'stroke-width', 'top-highlight', 'shade', 'specular',
     'ao', 'no-ao', 'glow', 'no-glow', 'glow-color', 'glow-blur',
     'bevel', 'no-bevel', 'opacity', 'rim-width', 'shadow-cast',
@@ -41,26 +38,39 @@ export class IsoRoundedCube extends HTMLElement {
   }
 
   private renderSvg() {
-    const result = renderRoundedBox({
-      width: this.num('width', 100),
-      height: this.num('height', 100),
+    const rx = this.getAttribute('radius-x')
+    const ry = this.getAttribute('radius-y')
+    const result = renderCylinder({
+      radius: this.num('radius', 50),
+      radiusX: rx != null ? this.num('radius-x', 50) : undefined,
+      radiusY: ry != null ? this.num('radius-y', 50) : undefined,
       depth: this.num('depth', 100),
-      radius: this.num('radius', 16),
       rotateX: this.num('rotate-x', 60),
       rotateZ: this.num('rotate-z', 45),
-      gradientStops: this.num('gradient-stops', 8),
+      gradientStops: this.num('gradient-stops', 12),
+      rings: this.num('rings', 0),
+      ringColor: this.getAttribute('ring-color') ?? undefined,
+      ringWidth: this.hasAttribute('ring-width') ? this.num('ring-width', 1.1) : undefined,
+      topRings: this.num('top-rings', 0),
       ...isoStyleFromElement(this),
       colors: {
         top: this.getAttribute('top-color') ?? undefined,
         front: this.getAttribute('front-color') ?? undefined,
-        right: this.getAttribute('right-color') ?? undefined
+        right: this.getAttribute('right-color') ?? undefined,
+        side: this.getAttribute('side-color') ?? undefined
       },
       anchors: parseAnchorsAttr(
         this.getAttribute('anchors'),
-        this.hasAttribute('show-anchors'),
+        false,
         (this.getAttribute('anchor-style') as AnchorStyle) || 'dot',
         this.getAttribute('anchor-color') ?? undefined
-      )
+      ) ?? (this.hasAttribute('show-anchors')
+        ? cylinderVisibleAnchors(
+          (this.getAttribute('anchor-style') as AnchorStyle) || 'dot',
+          6,
+          this.getAttribute('anchor-color') ?? undefined
+        )
+        : undefined)
     })
     this.innerHTML = result.svg
     const scale = this.num('scale', 1)
@@ -72,12 +82,12 @@ export class IsoRoundedCube extends HTMLElement {
   }
 }
 
-if (!customElements.get('iso-rounded-cube')) {
-  customElements.define('iso-rounded-cube', IsoRoundedCube)
+if (!customElements.get('iso-cylinder')) {
+  customElements.define('iso-cylinder', IsoCylinder)
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    'iso-rounded-cube': IsoRoundedCube
+    'iso-cylinder': IsoCylinder
   }
 }

@@ -13,14 +13,30 @@ export { Tooltip } from './components/Tooltip'
 export { CubeRenderer } from './components/CubeRenderer'
 export { PathCalculator } from './components/PathCalculator'
 
-// SVG 圆角立方体渲染器
+// SVG 圆角立方体 / 圆柱渲染器
 export { renderRoundedBox, createRoundedBoxSvg, projectPoint, viewDepth } from './core/RoundedBox'
 export type { RoundedBoxOptions, RoundedBoxResult } from './core/RoundedBox'
+export { renderCylinder, createCylinderSvg } from './core/Cylinder'
+export type { CylinderOptions } from './core/Cylinder'
+export { renderAnchor, renderAnchorsAt, ANCHOR_STYLES, visibleFaceAnchors, cylinderVisibleAnchors } from './core/Anchor'
+export type { AnchorStyle, AnchorOptions, ShapeAnchor } from './core/Anchor'
+export type { IsoShapeStyle, IsoShapeResult, FaceName, PositionName, Vec2, Vec3, MaterialName } from './core/isoSvg'
+export {
+  boxFacePoint,
+  cylinderAnchorPoint,
+  applyMaterial,
+  deriveFaceColors,
+  MATERIALS,
+  parseColor,
+  cssColor,
+  isMaterialName
+} from './core/isoSvg'
 
 // Web Components (声明式组件)
 export { IsoEntity, type FaceType, type PositionType } from './components/IsoEntity'
 export { IsoCube } from './components/IsoCube'
 export { IsoRoundedCube } from './components/IsoRoundedCube'
+export { IsoCylinder } from './components/IsoCylinder'
 export { IsoPlane } from './components/IsoPlane'
 export { IsoConsoleFront, IsoConsoleRight } from './components/IsoConsole'
 export { IsoConnector } from './components/IsoConnector'

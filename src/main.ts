@@ -71,9 +71,9 @@ function setupAngleControls() {
   const resetBtn = document.getElementById('reset-angles')
 
   function updateAngles() {
-    sceneState.rotateX = parseInt(rotateXSlider.value, 10)
-    sceneState.rotateZ = parseInt(rotateZSlider.value, 10)
-    sceneState.perspective = parseInt(perspectiveSlider.value, 10)
+    if (rotateXSlider) sceneState.rotateX = parseInt(rotateXSlider.value, 10)
+    if (rotateZSlider) sceneState.rotateZ = parseInt(rotateZSlider.value, 10)
+    if (perspectiveSlider) sceneState.perspective = parseInt(perspectiveSlider.value, 10)
     if (bendSlider) sceneState.bendRadius = parseInt(bendSlider.value, 10)
     if (perpSlider) sceneState.perpLength = parseInt(perpSlider.value, 10)
     if (rotateXValue) rotateXValue.textContent = String(sceneState.rotateX)

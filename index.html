@@ -3,61 +3,221 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Monibuca Admin 超级面板 - 等距视图</title>
+  <title>iso-engine · 等距 SVG 引擎</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-  <div class="header">
-    <h1>Monibuca Admin 超级面板</h1>
-    <span class="badge">For m7s Pro V5</span>
-    <span class="tip">提示: 拖拽空白处平移 · 滚轮缩放 · 圆角由 RoundedBox SVG 渲染</span>
-  </div>
+<body class="site">
+  <nav class="site-nav">
+    <a class="brand" href="#">iso-engine</a>
+    <div class="nav-links">
+      <a href="#features">特性</a>
+      <a href="#workshop">形体工坊</a>
+      <a href="#admin">超级面板</a>
+      <a href="demo-rounded.html">完整 Demo</a>
+    </div>
+  </nav>
 
-  <!-- 角度配置控制面板 -->
-  <div class="config-panel">
-    <div class="config-title">等距角度配置</div>
-    <div class="config-row">
-      <label>rotateX (俯视角): <span id="rotateX-value">60</span>°</label>
-      <input type="range" id="rotateX-slider" min="30" max="80" value="60" step="1">
+  <header class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">SVG · 正交投影 · 零 Canvas / WebGL</p>
+      <h1>用矢量拼出<br>2.5D 等距世界</h1>
+      <p class="lede">
+        水平圆角立方体、椭圆柱、11 种锚点。程序化输出纯 SVG，
+        适合架构图、设备面板和可交互场景。
+      </p>
+      <div class="cta">
+        <a class="btn btn-primary" href="#workshop">实时预览</a>
+        <a class="btn btn-ghost" href="#admin">Monibuca 面板</a>
+        <span class="install">
+          <code>pnpm add iso-engine</code>
+          <button type="button" class="copy-btn" data-copy="pnpm add iso-engine">复制</button>
+        </span>
+      </div>
     </div>
-    <div class="config-row">
-      <label>rotateZ (旋转角): <span id="rotateZ-value">45</span>°</label>
-      <input type="range" id="rotateZ-slider" min="20" max="70" value="45" step="1">
+    <div class="hero-visual">
+      <iso-rounded-cube width="130" height="130" depth="44" radius="40"
+        color="#8a5cf6" material="plastic" shadow
+        top-color="#1c1626" glow glow-color="#8a5cf6"></iso-rounded-cube>
+      <iso-cylinder radius="46" depth="108" rings="2"
+        color="#4fa8c4" material="plastic" shadow></iso-cylinder>
+      <iso-rounded-cube width="100" height="100" depth="78" radius="22"
+        color="#54bd8b" material="plastic" shadow></iso-rounded-cube>
     </div>
-    <div class="config-row">
-      <label>透视距离: <span id="perspective-value">0</span>px <span style="color:#888;font-size:10px">(SVG 正交)</span></label>
-      <input type="range" id="perspective-slider" min="0" max="5000" value="0" step="100" disabled>
-    </div>
-    <div class="config-row">
-      <label>连线弯折圆角: <span id="bend-value">14</span>px <span style="color:#888;font-size:10px">(0=直角)</span></label>
-      <input type="range" id="bend-slider" min="0" max="40" value="14" step="1">
-    </div>
-    <div class="config-row">
-      <label>正交伸出: <span id="perp-value">28</span> <span style="color:#888;font-size:10px">(面法线方向)</span></label>
-      <input type="range" id="perp-slider" min="0" max="80" value="28" step="2">
-    </div>
-    <button id="reset-angles">重置默认</button>
-    <button id="toggle-shell" style="margin-top: 4px;">收起罩子</button>
+  </header>
 
-    <!-- 选中实体属性显示 -->
-    <div class="entity-info" id="entity-info" style="display: none;">
-      <div class="config-title" style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">选中实体</div>
-      <div class="entity-prop"><span class="prop-label">ID:</span> <span id="entity-id">-</span></div>
-      <div class="entity-prop"><span class="prop-label">X:</span> <span id="entity-x">-</span></div>
-      <div class="entity-prop"><span class="prop-label">Y:</span> <span id="entity-y">-</span></div>
-      <div class="entity-prop"><span class="prop-label">Z:</span> <span id="entity-z">-</span></div>
-      <div class="entity-prop"><span class="prop-label">宽度:</span> <span id="entity-width">-</span></div>
-      <div class="entity-prop"><span class="prop-label">高度:</span> <span id="entity-height">-</span></div>
-      <div class="entity-prop"><span class="prop-label">深度:</span> <span id="entity-depth">-</span></div>
-      <div class="entity-prop"><span class="prop-label">z-index:</span> <span id="entity-zindex">-</span></div>
+  <section class="features" id="features">
+    <article>
+      <h3>精确圆角盒</h3>
+      <p>俯视圆角矩形沿 Z 拉伸。贝塞尔仿射不变，侧面一条路径 + 水平渐变。</p>
+    </article>
+    <article>
+      <h3>圆柱 / 椭圆柱</h3>
+      <p>独立半径、腰线与顶面环。数据库、桶、硬币一类形体开箱即用。</p>
+    </article>
+    <article>
+      <h3>锚点与连线</h3>
+      <p>11 种端口样式；场景里正交进出 + 轴对齐折线，弯折可圆角。</p>
+    </article>
+    <article>
+      <h3>声明式组件</h3>
+      <p><code>&lt;iso-rounded-cube&gt;</code> / <code>&lt;iso-cylinder&gt;</code>，属性即样式。</p>
+    </article>
+  </section>
+
+  <!-- ========== 单个圆角 / 圆柱配置预览 ========== -->
+  <section class="block" id="workshop">
+    <div class="block-head">
+      <div>
+        <h2>形体工坊</h2>
+        <p>单个圆角盒与圆柱的实时配置。切到「圆柱」可调椭圆半径与腰线。</p>
+      </div>
+      <a class="btn btn-ghost" href="demo-rounded.html">打开完整 Demo</a>
     </div>
-  </div>
 
-  <div id="scene-holder" class="scene-holder" aria-label="等距场景"></div>
+    <div class="shape-card">
+      <aside class="pg-panel">
+        <div class="shape-tabs">
+          <button type="button" id="shape-box" class="on">圆角盒</button>
+          <button type="button" id="shape-cyl">圆柱</button>
+        </div>
+        <div class="pg-tabs">
+          <button type="button" data-pg-tab="geo" class="on">几何</button>
+          <button type="button" data-pg-tab="look">外观</button>
+          <button type="button" data-pg-tab="anchor">锚点</button>
+        </div>
 
-  <!-- 详细信息浮动框 -->
+        <div data-pg-pane="geo">
+          <div class="ctl box-only"><label>Width</label><input type="range" id="w" min="20" max="240" value="140"><span class="val" id="w-v"></span></div>
+          <div class="ctl box-only"><label>Height</label><input type="range" id="h" min="20" max="240" value="140"><span class="val" id="h-v"></span></div>
+          <div class="ctl cyl-only" hidden><label>Radius X</label><input type="range" id="rxr" min="12" max="140" value="56"><span class="val" id="rxr-v"></span></div>
+          <div class="ctl cyl-only" hidden><label>Radius Y</label><input type="range" id="ryr" min="12" max="140" value="56"><span class="val" id="ryr-v"></span></div>
+          <div class="ctl"><label>Depth</label><input type="range" id="d" min="20" max="240" value="96"><span class="val" id="d-v"></span></div>
+          <div class="ctl box-only"><label>Radius</label><input type="range" id="r" min="0" max="120" value="28"><span class="val" id="r-v"></span></div>
+          <div class="ctl"><label>RotateX</label><input type="range" id="rx" min="10" max="85" value="60"><span class="val" id="rx-v"></span></div>
+          <div class="ctl"><label>RotateZ</label><input type="range" id="rz" min="5" max="85" value="45"><span class="val" id="rz-v"></span></div>
+          <div class="ctl cyl-only" hidden><label>腰线</label><input type="range" id="rings" min="0" max="8" value="2"><span class="val" id="rings-v"></span></div>
+          <div class="ctl cyl-only" hidden><label>顶面环</label><input type="range" id="top-rings" min="0" max="6" value="0"><span class="val" id="top-rings-v"></span></div>
+          <div class="ctl">
+            <label>颜色</label>
+            <input type="color" id="c-top" value="#7fa8ef" title="顶面">
+            <input type="color" id="c-front" value="#4f7fd9" title="前面">
+            <input type="color" id="c-right" value="#3763b0" title="右面">
+          </div>
+          <div class="ctl">
+            <label>主色</label>
+            <input type="color" id="c-base" value="#4f7fd9" title="主色，派生三面">
+            <button type="button" id="derive-faces" class="mini">派生三面</button>
+          </div>
+        </div>
+
+        <div data-pg-pane="look" hidden>
+          <div class="mat-tabs">
+            <button type="button" data-mat="" class="on">自定义</button>
+            <button type="button" data-mat="matte">哑光</button>
+            <button type="button" data-mat="plastic">塑料</button>
+            <button type="button" data-mat="glass">玻璃</button>
+            <button type="button" data-mat="metal">金属</button>
+          </div>
+          <div class="ctl"><label>顶面高光</label><input type="range" id="thi" min="0" max="100" value="40"><span class="val" id="thi-v"></span></div>
+          <div class="ctl"><label>侧面高光</label><input type="range" id="spec" min="0" max="100" value="25"><span class="val" id="spec-v"></span></div>
+          <div class="ctl"><label>暗面</label><input type="range" id="shade" min="20" max="100" value="62"><span class="val" id="shade-v"></span></div>
+          <div class="ctl"><label>透明度</label><input type="range" id="op" min="15" max="100" value="100"><span class="val" id="op-v"></span></div>
+          <div class="ctl"><label>渐变</label><input type="range" id="stops" min="2" max="24" value="8"><span class="val" id="stops-v"></span></div>
+          <div class="ctl"><label>描边</label><input type="checkbox" id="do-stroke"><input type="color" id="c-stroke" value="#e8eeff"></div>
+          <div class="ctl"><label>描边宽</label><input type="range" id="sw" min="0.5" max="5" step="0.1" value="1.4"><span class="val" id="sw-v"></span></div>
+          <div class="ctl checks">
+            <label><input type="checkbox" id="shadow" checked> 阴影</label>
+            <label><input type="checkbox" id="rim" checked> 边缘</label>
+            <label><input type="checkbox" id="ao" checked> AO</label>
+            <label><input type="checkbox" id="bevel"> 斜切</label>
+            <label><input type="checkbox" id="glow"><input type="color" id="c-glow" value="#7fa8ef"> 发光</label>
+          </div>
+        </div>
+
+        <div data-pg-pane="anchor" hidden>
+          <div class="ctl"><label>显示锚点</label><input type="checkbox" id="show-anc"></div>
+          <div class="anchor-grid" id="anchor-grid"></div>
+        </div>
+
+        <div class="presets">
+          <button type="button" data-preset="device">电源盒</button>
+          <button type="button" data-preset="chip">芯片</button>
+          <button type="button" data-preset="pill">胶囊</button>
+          <button type="button" data-preset="glass">玻璃</button>
+          <button type="button" data-preset="db">数据库</button>
+          <button type="button" data-preset="coin">硬币</button>
+        </div>
+      </aside>
+
+      <div class="shape-stage-wrap">
+        <div class="shape-stage" id="shape-stage"></div>
+        <p class="shape-meta" id="shape-meta"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Monibuca Admin 超级面板 ========== -->
+  <section class="block" id="admin">
+    <div class="block-head">
+      <div>
+        <h2>Monibuca Admin 超级面板</h2>
+        <p>拖拽空白平移 · 滚轮缩放 · 点击模块查看属性。圆角由 RoundedBox SVG 渲染。</p>
+      </div>
+    </div>
+
+    <div class="scene-card">
+      <div id="scene-holder" class="scene-holder" aria-label="等距场景"></div>
+
+      <aside class="config-panel">
+        <div class="config-head">
+          <div class="config-title">场景控制</div>
+          <button type="button" id="panel-fold" class="fold-btn">收起</button>
+        </div>
+        <div class="config-body">
+          <div class="config-group">视角</div>
+          <div class="config-row">
+            <label>俯视 rotateX <span id="rotateX-value">60</span>°</label>
+            <input type="range" id="rotateX-slider" min="30" max="80" value="60" step="1">
+          </div>
+          <div class="config-row">
+            <label>旋转 rotateZ <span id="rotateZ-value">45</span>°</label>
+            <input type="range" id="rotateZ-slider" min="20" max="70" value="45" step="1">
+          </div>
+          <div class="config-group">连线</div>
+          <div class="config-row">
+            <label>弯折圆角 <span id="bend-value">14</span></label>
+            <input type="range" id="bend-slider" min="0" max="40" value="14" step="1">
+          </div>
+          <div class="config-row">
+            <label>正交伸出 <span id="perp-value">28</span></label>
+            <input type="range" id="perp-slider" min="0" max="80" value="28" step="2">
+          </div>
+          <div class="config-actions">
+            <button type="button" id="reset-angles">重置</button>
+            <button type="button" id="toggle-shell">收起罩子</button>
+          </div>
+          <div class="entity-info" id="entity-info" style="display: none;">
+            <div class="config-group">选中实体</div>
+            <div class="entity-prop"><span class="prop-label">ID</span> <span id="entity-id">-</span></div>
+            <div class="entity-prop"><span class="prop-label">X / Y / Z</span> <span><span id="entity-x">-</span> · <span id="entity-y">-</span> · <span id="entity-z">-</span></span></div>
+            <div class="entity-prop"><span class="prop-label">W × H × D</span> <span><span id="entity-width">-</span>×<span id="entity-height">-</span>×<span id="entity-depth">-</span></span></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <footer class="site-foot">
+    <span>iso-engine · MIT</span>
+    <nav>
+      <a href="demo-rounded.html">圆角 Demo</a>
+      <a href="demo-cube.html">Cube</a>
+      <a href="demo-connector.html">连线</a>
+      <a href="demo-console.html">控制台</a>
+    </nav>
+  </footer>
+
   <div class="info-popup" id="info-popup"></div>
-
-  <script type="module" src="./src/main.ts"></script>
+  <script type="module" src="./src/site.ts"></script>
 </body>
 </html>
