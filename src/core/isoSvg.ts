@@ -227,9 +227,8 @@ export function wrapSvg(markup: string, viewBox: ViewBox): string {
     `width="${fmt(viewBox.width)}" height="${fmt(viewBox.height)}">${markup}</svg>`
 }
 
-/** 盒体局部坐标：原点在 (0,0,0) 角点，尺寸 (w,h,d) */
-export function boxFacePoint(w: number, h: number, d: number, face: FaceName, pos: PositionName = 'mc'): Vec3 {
-  const [u, v] = POS_UV[pos] || POS_UV.mc
+/** 盒体面 UV → 局部坐标；侧面 v=0 为顶边 */
+export function boxFaceUV(w: number, h: number, d: number, face: FaceName, u: number, v: number): Vec3 {
   switch (face) {
     case 'top': return [w * u, h * v, d]
     case 'bottom': return [w * u, h * v, 0]
@@ -238,6 +237,12 @@ export function boxFacePoint(w: number, h: number, d: number, face: FaceName, po
     case 'right': return [w, h * u, d * (1 - v)]
     case 'left': return [0, h * u, d * (1 - v)]
   }
+}
+
+/** 盒体局部坐标：原点在 (0,0,0) 角点，尺寸 (w,h,d) */
+export function boxFacePoint(w: number, h: number, d: number, face: FaceName, pos: PositionName = 'mc'): Vec3 {
+  const [u, v] = POS_UV[pos] || POS_UV.mc
+  return boxFaceUV(w, h, d, face, u, v)
 }
 
 /** 顶面 9 宫格 → 椭圆极坐标（mc 在圆心，其余在圆周） */
@@ -255,6 +260,35 @@ const TOP_POLAR: Record<PositionName, { ang: number; rad: number }> = {
 
 const SIDE_ANGLE: Record<string, number> = {
   right: 0, front: 90, left: 180, back: 270
+}
+
+/** 面 UV 在屏幕上的切向量，用来把锚点/贴花仿射到面上 */
+export function projectedFaceBasis(
+  face: FaceName | 'side',
+  project: (p: Vec3) => Vec2,
+  angleDeg?: number,
+  radiusX = 1,
+  radiusY = 1
+): { u: Vec2; v: Vec2 } {
+  const o = project([0, 0, 0])
+  const axis = (p: Vec3): Vec2 => {
+    const q = project(p)
+    return [q[0] - o[0], q[1] - o[1]]
+  }
+  const ex = axis([1, 0, 0])
+  const ey = axis([0, 1, 0])
+  const down: Vec2 = (() => {
+    const ez = axis([0, 0, 1])
+    return [-ez[0], -ez[1]]
+  })()
+  if (face === 'top' || face === 'bottom') return { u: ex, v: ey }
+  if (face === 'front' || face === 'back') return { u: ex, v: down }
+  if (face === 'right' || face === 'left') return { u: ey, v: down }
+  const t = (angleDeg ?? 90) * RAD
+  const tx = -radiusX * Math.sin(t)
+  const ty = radiusY * Math.cos(t)
+  const len = Math.hypot(tx, ty) || 1
+  return { u: axis([tx / len, ty / len, 0]), v: down }
 }
 
 export function cylinderAnchorPoint(
@@ -299,28 +333,43 @@ export const MATERIALS: Record<MaterialName, Partial<IsoShapeStyle>> = {
     topHighlight: 0.18, specular: 0.08, shade: 0.68,
     rim: true, rimWidth: 0.9, rimOpacity: 0.55,
     ao: true, aoStrength: 0.22, bevel: false, glow: false,
+    grain: 0.08, innerRim: false,
     shadow: true, shadowOpacity: 0.28, shadowCast: 0.85
   },
   plastic: {
     topHighlight: 0.42, specular: 0.45, shade: 0.62,
     rim: true, rimWidth: 1.2, rimOpacity: 0.85,
     ao: true, aoStrength: 0.28, bevel: true, glow: false,
+    grain: 0.06, innerRim: false,
     shadow: true, shadowOpacity: 0.3, shadowCast: 1
   },
   glass: {
-    opacity: 0.46, topHighlight: 0.7, specular: 0.55, shade: 0.72,
+    opacity: 0.52, topHighlight: 0.72, specular: 0.58, shade: 0.72,
     rim: true, rimWidth: 1.6, rimOpacity: 0.95,
-    stroke: 'rgba(255,255,255,0.4)', strokeWidth: 1.1,
-    glow: true, glowBlur: 10, ao: false, bevel: true,
+    stroke: 'rgba(210,230,255,0.45)', strokeWidth: 1.05,
+    glow: true, glowBlur: 9, ao: false, bevel: true,
+    grain: 0.48, innerRim: true,
     shadow: true, shadowOpacity: 0.2, shadowCast: 1.15
   },
   metal: {
     topHighlight: 0.55, specular: 0.9, shade: 0.48,
     rim: true, rimWidth: 1.4, rimOpacity: 0.9,
     ao: true, aoStrength: 0.18, bevel: true, glow: false,
+    grain: 0.22, innerRim: false,
     shadow: true, shadowOpacity: 0.32, shadowCast: 1
   }
 }
+
+export type ThemeName = 'dark-product' | 'navy-glass' | 'light-plate'
+
+export const THEMES: Record<ThemeName, { material: MaterialName; color: string; canvasClass: string }> = {
+  'dark-product': { material: 'plastic', color: '#4f7fd9', canvasClass: 'theme-dark-product' },
+  'navy-glass': { material: 'glass', color: '#6fa8e0', canvasClass: 'theme-navy-glass' },
+  'light-plate': { material: 'matte', color: '#4e7ad4', canvasClass: 'theme-light-plate' }
+}
+
+export const isThemeName = (v: string | null | undefined): v is ThemeName =>
+  v === 'dark-product' || v === 'navy-glass' || v === 'light-plate'
 
 export const isMaterialName = (v: string | null | undefined): v is MaterialName =>
   v === 'matte' || v === 'plastic' || v === 'glass' || v === 'metal'
@@ -372,6 +421,33 @@ export interface IsoShapeStyle {
   shadowOpacity?: number
   /** 投射阴影长度倍率，0 = 仅接触阴影，默认 1 */
   shadowCast?: number
+  /** 表面颗粒 0–1，玻璃/金属用 */
+  grain?: number
+  /** 顶面内沿高光 + 轮廓压暗（真玻璃） */
+  innerRim?: boolean
+  /** 顶面等距网格间距（模型单位）；0/缺省不画 */
+  grid?: number
+  /** 顶面标签，裁剪到顶面轮廓 */
+  label?: string
+  labelColor?: string
+  labelSize?: number
+  /** 前面/侧面状态灯数量 */
+  leds?: number
+  /** 闪灯频率（Hz）；0 = 常亮 */
+  ledHz?: number
+  /** 风扇；true / 九宫格位 / "u,v" / 面名（front 等） */
+  fan?: boolean | string
+  /** 风扇所在面，默认 top；圆柱侧面用 side / front / right / left / back */
+  fanFace?: FaceName | 'side'
+  /** 风扇在所选面上的 UV（0–1），覆盖 fan 字符串 */
+  fanU?: number
+  fanV?: number
+  /** 顶部全息；字符串为全息文字 */
+  hologram?: boolean | string
+  /** 半透明悬浮面板；字符串为标题 */
+  panel?: boolean | string
+  /** 顶边霓虹；字符串为颜色 */
+  neon?: boolean | string
 }
 
 export interface IsoShapeResult {
@@ -387,6 +463,11 @@ export function styleMargin(style: IsoShapeStyle, extra = 0): number {
   if (style.shadow) m = Math.max(m, 20 + (style.shadowCast ?? 1) * 24)
   if (style.glow) m = Math.max(m, (style.glowBlur ?? 8) * 2 + 6)
   if (style.stroke) m = Math.max(m, (style.strokeWidth ?? 1.4) + 2)
+  if ((style.grain ?? 0) > 0) m = Math.max(m, 8)
+  if (style.hologram) m = Math.max(m, 110)
+  if (style.panel) m = Math.max(m, 64)
+  if (style.neon) m = Math.max(m, 12)
+  if (style.fan || style.fanU != null || style.fanV != null) m = Math.max(m, 18)
   return Math.max(m, extra)
 }
 
@@ -456,8 +537,129 @@ export function isoStyleFromElement(el: HTMLElement): IsoShapeStyle {
     bevel: flag('bevel', 'no-bevel'),
     opacity: num('opacity'),
     rimWidth: num('rim-width'),
-    shadowCast: num('shadow-cast')
+    shadowCast: num('shadow-cast'),
+    grain: num('grain'),
+    innerRim: flag('inner-rim', 'no-inner-rim'),
+    grid: num('grid'),
+    label: el.getAttribute('label') ?? undefined,
+    labelColor: el.getAttribute('label-color') ?? undefined,
+    labelSize: num('label-size'),
+    leds: el.hasAttribute('leds') ? (num('leds') ?? 3) : undefined,
+    ledHz: num('led-hz'),
+    fan: el.hasAttribute('no-fan') ? false
+      : el.hasAttribute('fan') ? (el.getAttribute('fan') || true)
+      : undefined,
+    fanFace: parseFanFace(el.getAttribute('fan-face'))
+      ?? parseFanFace(el.getAttribute('fan')),
+    fanU: num('fan-u'),
+    fanV: num('fan-v'),
+    hologram: attrOrTrue(el, 'hologram'),
+    panel: attrOrTrue(el, 'panel'),
+    neon: attrOrTrue(el, 'neon')
   }
+}
+
+function attrOrTrue(el: HTMLElement, name: string): boolean | string | undefined {
+  if (!el.hasAttribute(name)) return undefined
+  const v = el.getAttribute(name)
+  return v ? v : true
+}
+
+const FAN_FACES = new Set(['top', 'bottom', 'front', 'back', 'left', 'right', 'side'])
+
+export function parseFanFace(raw: string | null | undefined): FaceName | 'side' | undefined {
+  if (!raw) return undefined
+  const s = raw.trim().toLowerCase().split(/[:\s,]/)[0]
+  if (s === 'side') return 'side'
+  if (FAN_FACES.has(s) && s in FACE_NORMALS) return s as FaceName
+  return undefined
+}
+
+export function xmlEscape(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+export function grainFilterDef(id: string, amount: number): string {
+  const freq = 0.55 + clamp(amount, 0, 1) * 0.5
+  return `<filter id="${id}" x="-15%" y="-15%" width="130%" height="130%" ` +
+    `color-interpolation-filters="sRGB">` +
+    `<feTurbulence type="fractalNoise" baseFrequency="${fmt(freq)}" numOctaves="3" ` +
+    `stitchTiles="stitch" result="n"/>` +
+    `<feColorMatrix in="n" type="saturate" values="0"/>` +
+    `</filter>`
+}
+
+export function isoGridLines(
+  project: (p: Vec3) => Vec2,
+  width: number,
+  height: number,
+  z: number,
+  step: number,
+  color = 'rgba(255,255,255,0.16)'
+): string {
+  const s = Math.max(8, step)
+  let markup = ''
+  for (let x = s; x < width - 0.5; x += s) {
+    const a = project([x, 0, z]), b = project([x, height, z])
+    markup += `<path d="M${fmt(a[0])} ${fmt(a[1])}L${fmt(b[0])} ${fmt(b[1])}" fill="none" ` +
+      `stroke="${color}" stroke-width="0.85"/>`
+  }
+  for (let y = s; y < height - 0.5; y += s) {
+    const a = project([0, y, z]), b = project([width, y, z])
+    markup += `<path d="M${fmt(a[0])} ${fmt(a[1])}L${fmt(b[0])} ${fmt(b[1])}" fill="none" ` +
+      `stroke="${color}" stroke-width="0.85"/>`
+  }
+  return markup
+}
+
+export function clippedLabelMarkup(
+  pid: string,
+  clipPath: string,
+  text: string,
+  origin: Vec2,
+  u: Vec2,
+  v: Vec2,
+  size: number,
+  color: string
+): { defs: string; markup: string } {
+  if (!text) return { defs: '', markup: '' }
+  const defs = `<clipPath id="${pid}-lb"><path d="${clipPath}"/></clipPath>`
+  const markup =
+    `<g clip-path="url(#${pid}-lb)">` +
+    `<text transform="matrix(${fmt(u[0])} ${fmt(u[1])} ${fmt(v[0])} ${fmt(v[1])} ${fmt(origin[0])} ${fmt(origin[1])})" ` +
+    `text-anchor="middle" dominant-baseline="middle" font-size="${fmt(size)}" font-weight="600" ` +
+    `fill="${color}" style="pointer-events:none">${xmlEscape(text)}</text></g>`
+  return { defs, markup }
+}
+
+export function surfaceExtras(
+  pid: string,
+  topPath: string,
+  sidePath: string,
+  style: IsoShapeStyle,
+  gridMarkup = ''
+): { defs: string; markup: string } {
+  const grain = style.grain ?? 0
+  let defs = ''
+  let markup = ''
+  if (grain > 0) {
+    defs += grainFilterDef(`${pid}-gr`, grain)
+    markup +=
+      `<path d="${sidePath}" fill="#fff" opacity="${fmt(grain * 0.07)}" filter="url(#${pid}-gr)"/>` +
+      `<path d="${topPath}" fill="#fff" opacity="${fmt(grain * 0.13)}" filter="url(#${pid}-gr)"/>`
+  }
+  if (gridMarkup) {
+    markup += `<g clip-path="url(#${pid}-topclip)">${gridMarkup}</g>`
+    defs += `<clipPath id="${pid}-topclip"><path d="${topPath}"/></clipPath>`
+  }
+  if (style.innerRim) {
+    markup +=
+      `<path d="${sidePath}" fill="none" stroke="#071018" stroke-width="1.45" ` +
+      `stroke-opacity="0.34" stroke-linejoin="round"/>` +
+      `<path d="${topPath}" fill="none" stroke="#fff" stroke-width="3.1" ` +
+      `stroke-opacity="0.24" stroke-linejoin="round"/>`
+  }
+  return { defs, markup }
 }
 
 export function glowFilterDef(id: string, color: string, blur: number): string {

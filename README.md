@@ -32,6 +32,7 @@ import {
   viewDepth,
   IsoRoundedCube, // 注册 <iso-rounded-cube>
   IsoCylinder,    // 注册 <iso-cylinder>
+  IsoPerson,      // 注册 <iso-person>
 } from 'iso-engine'
 ```
 
@@ -83,6 +84,8 @@ document.getElementById('box').innerHTML = svg
 | `no-rim` | 关闭顶面边缘高光 |
 | `top-highlight` / `specular` / `shade` | 顶面径向高光、侧面高光、暗面倍率 |
 | `ao` / `bevel` / `glow` | 底部遮蔽、顶面斜切、外发光 |
+| `grain` / `inner-rim` / `grid` / `label` | 颗粒、玻璃内沿、顶面网格、顶面标签 |
+| `leds` / `led-hz` / `fan` / `fan-face` / `fan-u` / `fan-v` / `hologram` / `panel` / `neon` | 信号灯（Hz、0=常亮）、风扇（面 + UV）、全息、悬浮面板、霓虹 |
 | `stroke` / `stroke-width` | 轮廓描边 |
 | `show-anchors` / `anchor-style` | 显示顶/前/右锚点；样式见下 |
 | `scale` | 显示缩放 |
@@ -153,11 +156,13 @@ function renderRoundedBox(options?: RoundedBoxOptions): RoundedBoxResult
 | `shadow` / `shadowCast` | false / 1 | 接触 + 投射阴影；`shadowCast=0` 仅接触 |
 | `topHighlight` / `specular` / `shade` | 0 / 0 / 0.62 | 顶面高光、侧面高光、暗面 |
 | `ao` / `bevel` / `glow` | false | AO、斜切、发光 |
+| `grain` / `innerRim` / `grid` / `label` | — | 颗粒、玻璃内沿、顶面网格、顶面标签 |
+| `leds` / `ledHz` / `fan` / `fanFace` / `fanU` / `fanV` | — | 信号灯数量与频率；风扇所在面（top/front/right/left/back）及 UV |
 | `stroke` / `opacity` | — / 1 | 描边与透明度 |
 | `anchors` | — | `{ face, position, style }[]` |
 | `id` | 自动 | 渐变/滤镜 id 前缀（场景内须唯一） |
 
-锚点样式：`dot` `ring` `double` `diamond` `square` `plus` `cross` `pin` `arrow` `hex` `dash`。
+锚点样式：`dot` `ring` `double` `diamond` `square` `plus` `cross` `pin` `arrow` `hex` `dash`。贴在形体上时按所在面仿射（顶面椭圆、侧面平行四边形），不是屏幕朝向的圆点。
 
 ```js
 import { renderCylinder } from 'iso-engine'
@@ -186,6 +191,21 @@ const { svg } = renderCylinder({
 - `viewDepth(x, y, z, rotateX?, rotateZ?)` → number（越大越近）
 - `deriveFaceColors(base, shade?)` → `{ top, front, right }`
 - `MATERIALS` / `applyMaterial(options)` — 材质预设
+- `THEMES` — `dark-product` / `navy-glass` / `light-plate`
+- `renderIsoLink({ from, to, route, color, flow, glow, arrow })` — 轴对齐折线连线（渐变 / 发光 / 流向）
+- `isoLinkStyle()` — 流向动画 CSS，放进场景 `<defs>` 一次即可
+- `renderIsoPerson({ color, skin, pants, scale })` / `renderIsoPlant({ pot, foliage })` — 小人与盆栽道具
+
+```js
+import { renderIsoLink, isoLinkStyle } from 'iso-engine'
+
+const link = renderIsoLink({
+  from: [50, 50, 60], to: [210, 85, 70],
+  fromFace: 'top', toFace: 'top',
+  route: 'auto', color: '#7fa8ef', glow: true, flow: true, arrow: true, id: 'lk0'
+})
+svg.innerHTML = `<defs>${isoLinkStyle()}${link.defs}</defs>${link.markup}`
+```
 
 ## CSS 3D 路径（直角立方体 / 插槽内容）
 
@@ -254,8 +274,9 @@ window.dispatchEvent(new CustomEvent('iso-angles-changed', {
 
 ```bash
 pnpm install
-pnpm dev      # http://localhost:5373  官网首页（形体工坊 + Monibuca 面板）
-pnpm build    # 生成 dist/，供 npm 发布
+pnpm dev         # http://localhost:5373  官网首页（形体工坊 + Monibuca 面板）
+pnpm build       # 生成 dist/，供 npm 发布
+pnpm build:site  # 生成 dist-site/，供 Vercel 部署官网
 ```
 
 ## 许可证

@@ -22,6 +22,8 @@ export class IsoRoundedCube extends HTMLElement {
     'stroke', 'stroke-width', 'top-highlight', 'shade', 'specular',
     'ao', 'no-ao', 'glow', 'no-glow', 'glow-color', 'glow-blur',
     'bevel', 'no-bevel', 'opacity', 'rim-width', 'shadow-cast',
+    'grain', 'inner-rim', 'no-inner-rim', 'grid', 'label', 'label-color', 'label-size',
+    'leds', 'led-hz', 'fan', 'fan-face', 'fan-u', 'fan-v', 'hologram', 'panel', 'neon',
     'show-anchors', 'anchor-style', 'anchor-color', 'anchors'
   ]
 

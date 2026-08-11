@@ -34,19 +34,24 @@ import {
   applySpecular,
   boxFacePoint,
   boundsOf,
+  projectedFaceBasis,
+  clippedLabelMarkup,
   cssColor,
   fmt,
   glowFilterDef,
   groundShadowMarkup,
+  isoGridLines,
   makeProjection,
   resolveFaceColors,
   shadeColor,
   shadowOffset,
   styleMargin,
+  surfaceExtras,
   topHighlightGradientDef,
   towardWhite,
   wrapSvg
 } from './isoSvg'
+import { renderShapeFx } from './IsoFx'
 
 export type { Vec2, Vec3 } from './isoSvg'
 export { projectPoint, viewDepth } from './isoSvg'
@@ -130,12 +135,12 @@ export function renderRoundedBox(raw: RoundedBoxOptions = {}): RoundedBoxResult 
       const s = a0 + (total * i) / nSeg
       const e = a0 + (total * (i + 1)) / nSeg
       const half = ((e - s) / 2) * RAD
-      const k = (4 / 3) * Math.tan(half / 2) * r
+      const k = (4 / 3) * Math.tan(Math.abs(half) / 2) * r
       const ps = arcPt(c, s)
       const pe = arcPt(c, e)
       const t1: Vec2 = [-Math.sin(s * RAD), Math.cos(s * RAD)]
       const t2: Vec2 = [-Math.sin(e * RAD), Math.cos(e * RAD)]
-      const sign = Math.sign(total)
+      const sign = Math.sign(total) || 1
       const c1 = pr([ps[0] + sign * k * t1[0], ps[1] + sign * k * t1[1]], z)
       const c2 = pr([pe[0] - sign * k * t2[0], pe[1] - sign * k * t2[1]], z)
       const p2 = pr(pe, z)
@@ -283,11 +288,35 @@ export function renderRoundedBox(raw: RoundedBoxOptions = {}): RoundedBoxResult 
       `stroke-opacity="${fmt(so)}" stroke-linejoin="round"/>`
   }
 
+  const gridStep = options.grid ?? 0
+  const gridMarkup = gridStep > 0
+    ? isoGridLines(P.project, W, H, D, gridStep)
+    : ''
+  const extras = surfaceExtras(pid, topPath, sidePath, options, gridMarkup)
+  defs += extras.defs
+
+  const z0 = P.project([0, 0, 0])
+  const ux = P.project([1, 0, 0])
+  const vy = P.project([0, 1, 0])
+  const label = clippedLabelMarkup(
+    pid, topPath, options.label ?? '',
+    P.project([W / 2, H / 2, D]),
+    [ux[0] - z0[0], ux[1] - z0[1]],
+    [vy[0] - z0[0], vy[1] - z0[1]],
+    options.labelSize ?? Math.min(W, H) * 0.16,
+    options.labelColor ?? 'rgba(255,255,255,0.92)'
+  )
+  defs += label.defs
+  const fx = renderShapeFx({
+    pid, project: P.project, kind: 'box', w: W, h: H, d: D, topPath, style: options
+  })
+  defs += fx.defs
+
   let body =
     `<path d="${sidePath}" fill="url(#${pid}-side)"/>` +
     aoMarkup +
     `<path d="${topPath}" fill="${topFill}"/>` +
-    bevelMarkup + rimMarkup + strokeMarkup
+    extras.markup + bevelMarkup + rimMarkup + strokeMarkup + label.markup
 
   if (options.glow) {
     body = `<g filter="url(#${pid}-glow)">${body}</g>`
@@ -301,7 +330,10 @@ export function renderRoundedBox(raw: RoundedBoxOptions = {}): RoundedBoxResult 
     const pts = options.anchors.map(a => {
       const face = a.face === 'side' ? 'front' : a.face
       const loc = boxFacePoint(W, H, D, face, a.position ?? 'mc')
-      return { p: P.project(loc), opts: a }
+      return {
+        p: P.project(loc),
+        opts: { ...a, basis: a.basis ?? projectedFaceBasis(face, P.project) }
+      }
     })
     anchorMarkup = renderAnchorsAt(pts, pid)
   }
@@ -315,7 +347,7 @@ export function renderRoundedBox(raw: RoundedBoxOptions = {}): RoundedBoxResult 
   }
   const viewBox = boundsOf(samplePts, styleMargin(options, maxAnchorExtent(options.anchors)))
 
-  const markup = `<defs>${defs}</defs>` + shadowMarkup + body + anchorMarkup
+  const markup = `<defs>${defs}</defs>` + shadowMarkup + body + fx.markup + anchorMarkup
   return {
     svg: wrapSvg(markup, viewBox),
     markup,

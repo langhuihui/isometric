@@ -13,27 +13,33 @@ import {
 } from './core/Anchor'
 import {
   MATERIALS,
+  THEMES,
   cssColor,
   deriveFaceColors,
   isMaterialName,
+  isThemeName,
   parseColor,
-  type MaterialName
+  type MaterialName,
+  type ThemeName
 } from './core/isoSvg'
 
 const SLIDERS = [
   'w', 'h', 'd', 'r', 'rx', 'rz', 'stops',
   'rxr', 'ryr', 'rings', 'top-rings',
-  'thi', 'spec', 'shade', 'op', 'sw'
+  'thi', 'spec', 'shade', 'op', 'sw', 'grain', 'grid',
+  'led-hz', 'fan-u', 'fan-v'
 ]
 
 const PRESETS: Record<string, Record<string, unknown>> = {
   device: { shape: 'box', w: 200, h: 200, d: 56, r: 60, top: '#1c1626', front: '#8a5cf6', right: '#5b34c4', thi: 40, spec: 30 },
+  server: { shape: 'box', w: 170, h: 130, d: 72, r: 16, top: '#1a1a2e', front: '#2d3748', right: '#1a202c', leds: 4, fan: true, fanU: 28, fanV: 32, ledHz: 1.2, neon: true, panel: true, thi: 25, spec: 20 },
   chip: { shape: 'box', w: 200, h: 200, d: 34, r: 24, top: '#1f2a44', front: '#31415f', right: '#1a2338' },
   tower: { shape: 'box', w: 90, h: 90, d: 220, r: 26, top: '#e8ebf2', front: '#c3cad8', right: '#9aa4b8' },
   pill: { shape: 'box', w: 200, h: 120, d: 70, r: 60, top: '#a8e6c8', front: '#5cbf94', right: '#3d9a72' },
   sharp: { shape: 'box', w: 140, h: 140, d: 96, r: 0, top: '#7fa8ef', front: '#4f7fd9', right: '#3763b0' },
   glass: { shape: 'box', w: 150, h: 150, d: 110, r: 22, top: '#7fa8ef', front: '#4f7fd9', right: '#3763b0', material: 'glass' },
-  db: { shape: 'cyl', rxr: 52, ryr: 52, d: 120, rings: 3, top: '#8ad8e8', front: '#4fa8c4', right: '#3a84a0', thi: 65, spec: 80 },
+  plate: { shape: 'box', w: 220, h: 180, d: 16, r: 10, top: '#3a455c', front: '#2a3344', right: '#222a38', material: 'matte', grid: 36 },
+  db: { shape: 'cyl', rxr: 52, ryr: 52, d: 120, rings: 3, top: '#8ad8e8', front: '#4fa8c4', right: '#3a84a0', thi: 65, spec: 80, hologram: true, leds: 3 },
   barrel: { shape: 'cyl', rxr: 64, ryr: 48, d: 150, rings: 4, top: '#d4a574', front: '#b07840', right: '#8a5a2a', thi: 40, spec: 45 },
   coin: { shape: 'cyl', rxr: 70, ryr: 70, d: 18, rings: 0, topRings: 3, top: '#ffe08a', front: '#e0b040', right: '#c49420', thi: 80, spec: 90 }
 }
@@ -74,6 +80,21 @@ export function initShapePlayground(): void {
     setChk('glow', p.glow)
     const stroke = $('do-stroke') as HTMLInputElement | null
     if (stroke) stroke.checked = !!p.stroke
+    setNum('grain', p.grain ?? 0, 100)
+  }
+
+  const setTheme = (name: ThemeName) => {
+    const t = THEMES[name]
+    document.querySelectorAll('[data-theme]').forEach(b => {
+      b.classList.toggle('on', (b as HTMLElement).dataset.theme === name)
+    })
+    const canvas = stage.closest('.shape-stage-wrap') || stage
+    canvas.classList.remove('theme-dark-product', 'theme-navy-glass', 'theme-light-plate')
+    canvas.classList.add(t.canvasClass)
+    const base = $('c-base') as HTMLInputElement | null
+    if (base) base.value = t.color
+    setMaterial(t.material, true)
+    deriveFaces()
   }
 
   const deriveFaces = () => {
@@ -159,6 +180,26 @@ export function initShapePlayground(): void {
       specular: +(($('spec') as HTMLInputElement)?.value || 0) / 100,
       shade: +(($('shade') as HTMLInputElement)?.value || 62) / 100,
       opacity: +(($('op') as HTMLInputElement)?.value || 100) / 100,
+      grain: +(($('grain') as HTMLInputElement)?.value || 0) / 100,
+      grid: shape === 'box' ? +(($('grid') as HTMLInputElement)?.value || 0) : undefined,
+      label: (($('shape-label') as HTMLInputElement | null)?.value || '').trim() || undefined,
+      leds: ($('fx-leds') as HTMLInputElement | null)?.checked ? 4 : undefined,
+      ledHz: ($('fx-leds') as HTMLInputElement | null)?.checked
+        ? +(($('led-hz') as HTMLInputElement)?.value || 0.8)
+        : undefined,
+      fan: ($('fx-fan') as HTMLInputElement | null)?.checked || undefined,
+      fanFace: ($('fx-fan') as HTMLInputElement | null)?.checked
+        ? ((($('fan-face') as HTMLSelectElement | null)?.value || 'top') as 'top' | 'front' | 'right' | 'left' | 'back')
+        : undefined,
+      fanU: ($('fx-fan') as HTMLInputElement | null)?.checked
+        ? +(($('fan-u') as HTMLInputElement)?.value || 50) / 100
+        : undefined,
+      fanV: ($('fx-fan') as HTMLInputElement | null)?.checked
+        ? +(($('fan-v') as HTMLInputElement)?.value || 50) / 100
+        : undefined,
+      hologram: ($('fx-holo') as HTMLInputElement | null)?.checked ? 'SYS' : undefined,
+      panel: ($('fx-panel') as HTMLInputElement | null)?.checked ? 'ONLINE' : undefined,
+      neon: ($('fx-neon') as HTMLInputElement | null)?.checked || undefined,
       colors: {
         top: ($('c-top') as HTMLInputElement)?.value,
         front: ($('c-front') as HTMLInputElement)?.value,
@@ -222,6 +263,7 @@ export function initShapePlayground(): void {
       setNum('rxr', p.rxr); setNum('ryr', p.ryr); setNum('d', p.d)
       setNum('rings', p.rings ?? 2); setNum('top-rings', p.topRings ?? 0)
       setNum('thi', p.thi ?? 0); setNum('spec', p.spec ?? 0); setNum('op', p.op ?? 100)
+      setNum('grid', p.grid ?? 0)
       const top = $('c-top') as HTMLInputElement | null
       const front = $('c-front') as HTMLInputElement | null
       const right = $('c-right') as HTMLInputElement | null
@@ -236,6 +278,20 @@ export function initShapePlayground(): void {
       if (glow) glow.checked = !!p.glow
       if (ao) ao.checked = !!p.ao
       if (bevel) bevel.checked = !!p.bevel
+      const setChk = (id: string, on: boolean) => {
+        const el = $(id) as HTMLInputElement | null
+        if (el) el.checked = on
+      }
+      setChk('fx-leds', !!p.leds)
+      setChk('fx-fan', !!p.fan)
+      setNum('led-hz', p.ledHz ?? 0.8)
+      const faceEl = $('fan-face') as HTMLSelectElement | null
+      if (faceEl) faceEl.value = String(p.fanFace ?? 'top')
+      setNum('fan-u', p.fanU ?? 50)
+      setNum('fan-v', p.fanV ?? 50)
+      setChk('fx-holo', !!p.hologram)
+      setChk('fx-panel', !!p.panel)
+      setChk('fx-neon', !!p.neon)
       const mat = isMaterialName(String(p.material ?? '')) ? p.material as MaterialName : ''
       setMaterial(mat, !!mat)
       setShape((p.shape as 'box' | 'cyl') || 'box')
@@ -244,7 +300,8 @@ export function initShapePlayground(): void {
 
   const listen = [
     ...SLIDERS, 'c-top', 'c-front', 'c-right', 'shadow', 'rim',
-    'ao', 'bevel', 'glow', 'c-glow', 'do-stroke', 'c-stroke', 'show-anc'
+    'ao', 'bevel', 'glow', 'c-glow', 'do-stroke', 'c-stroke', 'show-anc', 'shape-label',
+    'fx-leds', 'fx-fan', 'fx-holo', 'fx-panel', 'fx-neon', 'led-hz', 'fan-face', 'fan-u', 'fan-v'
   ]
   for (const id of listen) $(id)?.addEventListener('input', refresh)
   $('c-base')?.addEventListener('input', () => { deriveFaces(); refresh() })
@@ -253,6 +310,14 @@ export function initShapePlayground(): void {
     btn.addEventListener('click', () => {
       const name = (btn as HTMLElement).dataset.mat || ''
       setMaterial(isMaterialName(name) ? name : '', true)
+      refresh()
+    })
+  })
+  document.querySelectorAll('[data-theme]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const name = (btn as HTMLElement).dataset.theme || ''
+      if (!isThemeName(name)) return
+      setTheme(name)
       refresh()
     })
   })

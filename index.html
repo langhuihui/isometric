@@ -22,7 +22,7 @@
       <p class="eyebrow">SVG · 正交投影 · 零 Canvas / WebGL</p>
       <h1>用矢量拼出<br>2.5D 等距世界</h1>
       <p class="lede">
-        水平圆角立方体、椭圆柱、11 种锚点。程序化输出纯 SVG，
+        水平圆角立方体、椭圆柱、小人与道具、11 种锚点。程序化输出纯 SVG，
         适合架构图、设备面板和可交互场景。
       </p>
       <div class="cta">
@@ -37,11 +37,15 @@
     <div class="hero-visual">
       <iso-rounded-cube width="130" height="130" depth="44" radius="40"
         color="#8a5cf6" material="plastic" shadow
-        top-color="#1c1626" glow glow-color="#8a5cf6"></iso-rounded-cube>
+        top-color="#1c1626" glow glow-color="#8a5cf6" label="ISO"
+        leds="4" led-hz="1.2" fan fan-u="0.28" fan-v="0.32" neon></iso-rounded-cube>
       <iso-cylinder radius="46" depth="108" rings="2"
-        color="#4fa8c4" material="plastic" shadow></iso-cylinder>
+        color="#4fa8c4" material="plastic" shadow label="DB"
+        hologram="DB" leds="3" led-hz="0.6"></iso-cylinder>
       <iso-rounded-cube width="100" height="100" depth="78" radius="22"
-        color="#54bd8b" material="plastic" shadow></iso-rounded-cube>
+        color="#6fa8e0" material="glass" shadow hologram="SYS" panel="CPU 76%"></iso-rounded-cube>
+      <iso-person color="#8a5cf6" scale="1.15"></iso-person>
+      <iso-plant foliage="#3d9a6e" scale="0.85"></iso-plant>
     </div>
   </header>
 
@@ -60,7 +64,7 @@
     </article>
     <article>
       <h3>声明式组件</h3>
-      <p><code>&lt;iso-rounded-cube&gt;</code> / <code>&lt;iso-cylinder&gt;</code>，属性即样式。</p>
+      <p><code>&lt;iso-rounded-cube&gt;</code> / <code>&lt;iso-cylinder&gt;</code>。闪灯、风扇、全息、霓虹都是属性。</p>
     </article>
   </section>
 
@@ -112,6 +116,11 @@
 
         <div data-pg-pane="look" hidden>
           <div class="mat-tabs">
+            <button type="button" data-theme="dark-product">深色产品</button>
+            <button type="button" data-theme="navy-glass">暗色玻璃</button>
+            <button type="button" data-theme="light-plate">浅色底板</button>
+          </div>
+          <div class="mat-tabs">
             <button type="button" data-mat="" class="on">自定义</button>
             <button type="button" data-mat="matte">哑光</button>
             <button type="button" data-mat="plastic">塑料</button>
@@ -125,6 +134,9 @@
           <div class="ctl"><label>渐变</label><input type="range" id="stops" min="2" max="24" value="8"><span class="val" id="stops-v"></span></div>
           <div class="ctl"><label>描边</label><input type="checkbox" id="do-stroke"><input type="color" id="c-stroke" value="#e8eeff"></div>
           <div class="ctl"><label>描边宽</label><input type="range" id="sw" min="0.5" max="5" step="0.1" value="1.4"><span class="val" id="sw-v"></span></div>
+          <div class="ctl"><label>颗粒</label><input type="range" id="grain" min="0" max="100" value="0"><span class="val" id="grain-v"></span></div>
+          <div class="ctl box-only"><label>网格</label><input type="range" id="grid" min="0" max="80" value="0"><span class="val" id="grid-v"></span></div>
+          <div class="ctl"><label>标签</label><input type="text" id="shape-label" placeholder="顶面文字" maxlength="16"></div>
           <div class="ctl checks">
             <label><input type="checkbox" id="shadow" checked> 阴影</label>
             <label><input type="checkbox" id="rim" checked> 边缘</label>
@@ -132,6 +144,25 @@
             <label><input type="checkbox" id="bevel"> 斜切</label>
             <label><input type="checkbox" id="glow"><input type="color" id="c-glow" value="#7fa8ef"> 发光</label>
           </div>
+          <div class="ctl checks">
+            <label><input type="checkbox" id="fx-leds"> 闪灯</label>
+            <label><input type="checkbox" id="fx-fan"> 风扇</label>
+            <label><input type="checkbox" id="fx-holo"> 全息</label>
+            <label><input type="checkbox" id="fx-panel"> 面板</label>
+            <label><input type="checkbox" id="fx-neon"> 霓虹</label>
+          </div>
+          <div class="ctl"><label>闪灯 Hz</label><input type="range" id="led-hz" min="0" max="4" step="0.1" value="0.8"><span class="val" id="led-hz-v"></span></div>
+          <div class="ctl"><label>风扇面</label>
+            <select id="fan-face">
+              <option value="top">顶面</option>
+              <option value="front">前面</option>
+              <option value="right">右面</option>
+              <option value="left">左面</option>
+              <option value="back">后面</option>
+            </select>
+          </div>
+          <div class="ctl"><label>风扇 U</label><input type="range" id="fan-u" min="8" max="92" value="50"><span class="val" id="fan-u-v"></span></div>
+          <div class="ctl"><label>风扇 V</label><input type="range" id="fan-v" min="8" max="92" value="50"><span class="val" id="fan-v-v"></span></div>
         </div>
 
         <div data-pg-pane="anchor" hidden>
@@ -141,9 +172,11 @@
 
         <div class="presets">
           <button type="button" data-preset="device">电源盒</button>
+          <button type="button" data-preset="server">机箱</button>
           <button type="button" data-preset="chip">芯片</button>
           <button type="button" data-preset="pill">胶囊</button>
           <button type="button" data-preset="glass">玻璃</button>
+          <button type="button" data-preset="plate">底板</button>
           <button type="button" data-preset="db">数据库</button>
           <button type="button" data-preset="coin">硬币</button>
         </div>

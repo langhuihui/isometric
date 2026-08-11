@@ -20,16 +20,22 @@ export { renderCylinder, createCylinderSvg } from './core/Cylinder'
 export type { CylinderOptions } from './core/Cylinder'
 export { renderAnchor, renderAnchorsAt, ANCHOR_STYLES, visibleFaceAnchors, cylinderVisibleAnchors } from './core/Anchor'
 export type { AnchorStyle, AnchorOptions, ShapeAnchor } from './core/Anchor'
-export type { IsoShapeStyle, IsoShapeResult, FaceName, PositionName, Vec2, Vec3, MaterialName } from './core/isoSvg'
+export { renderIsoLink, isoLinkStyle, routeIsoWaypoints } from './core/IsoLink'
+export type { IsoLinkOptions } from './core/IsoLink'
+export { renderIsoPerson, renderIsoPlant } from './core/IsoProps'
+export type { IsoPersonOptions, IsoPlantOptions } from './core/IsoProps'
+export type { IsoShapeStyle, IsoShapeResult, FaceName, PositionName, Vec2, Vec3, MaterialName, ThemeName } from './core/isoSvg'
 export {
   boxFacePoint,
   cylinderAnchorPoint,
   applyMaterial,
   deriveFaceColors,
   MATERIALS,
+  THEMES,
   parseColor,
   cssColor,
-  isMaterialName
+  isMaterialName,
+  isThemeName
 } from './core/isoSvg'
 
 // Web Components (声明式组件)
@@ -37,6 +43,7 @@ export { IsoEntity, type FaceType, type PositionType } from './components/IsoEnt
 export { IsoCube } from './components/IsoCube'
 export { IsoRoundedCube } from './components/IsoRoundedCube'
 export { IsoCylinder } from './components/IsoCylinder'
+export { IsoPerson, IsoPlant } from './components/IsoPerson'
 export { IsoPlane } from './components/IsoPlane'
 export { IsoConsoleFront, IsoConsoleRight } from './components/IsoConsole'
 export { IsoConnector } from './components/IsoConnector'

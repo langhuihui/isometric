@@ -16,9 +16,11 @@ import {
   applyMaterial,
   applySpecular,
   clamp,
+  clippedLabelMarkup,
   cssColor,
   cylinderAnchorPoint,
   fmt,
+  projectedFaceBasis,
   glowFilterDef,
   groundShadowMarkup,
   makeProjection,
@@ -26,11 +28,13 @@ import {
   shadeColor,
   shadowOffset,
   styleMargin,
+  surfaceExtras,
   topHighlightGradientDef,
   towardWhite,
   wrapSvg,
   boundsOf
 } from './isoSvg'
+import { renderShapeFx } from './IsoFx'
 
 export interface CylinderOptions extends IsoShapeStyle {
   /** 圆形半径；若同时给 radiusX/radiusY 则忽略 */
@@ -104,7 +108,7 @@ export function renderCylinder(raw: CylinderOptions = {}): IsoShapeResult {
       const s = a0 + (total * i) / nSeg
       const e = a0 + (total * (i + 1)) / nSeg
       const half = ((e - s) / 2) * RAD
-      const k = (4 / 3) * Math.tan(half / 2)
+      const k = (4 / 3) * Math.tan(Math.abs(half) / 2)
       const ps = arcPt(s)
       const pe = arcPt(e)
       const sign = Math.sign(total) || 1
@@ -293,11 +297,31 @@ export function renderCylinder(raw: CylinderOptions = {}): IsoShapeResult {
       `stroke-opacity="${fmt(so)}" stroke-linejoin="round"/>`
   }
 
+  const extras = surfaceExtras(pid, topPath, sidePath, options)
+  defs += extras.defs
+
+  const z0 = P.project([0, 0, 0])
+  const ux = P.project([1, 0, 0])
+  const vy = P.project([0, 1, 0])
+  const label = clippedLabelMarkup(
+    pid, topPath, options.label ?? '',
+    P.project([cx, cy, D]),
+    [ux[0] - z0[0], ux[1] - z0[1]],
+    [vy[0] - z0[0], vy[1] - z0[1]],
+    options.labelSize ?? Math.min(rx, ry) * 0.28,
+    options.labelColor ?? 'rgba(255,255,255,0.92)'
+  )
+  defs += label.defs
+  const fx = renderShapeFx({
+    pid, project: P.project, kind: 'cyl', w: rx * 2, h: ry * 2, d: D, topPath, style: options
+  })
+  defs += fx.defs
+
   let body =
     `<path d="${sidePath}" fill="url(#${pid}-side)"/>` +
     aoMarkup + ringMarkup +
     `<path d="${topPath}" fill="${topFill}"/>` +
-    topRingMarkup + bevelMarkup + rimMarkup + strokeMarkup
+    extras.markup + topRingMarkup + bevelMarkup + rimMarkup + strokeMarkup + label.markup
 
   if (options.glow) {
     body = `<g filter="url(#${pid}-glow)">${body}</g>`
@@ -310,7 +334,15 @@ export function renderCylinder(raw: CylinderOptions = {}): IsoShapeResult {
   if (options.anchors?.length) {
     const pts = options.anchors.map(a => {
       const loc = cylinderAnchorPoint(rx, ry, D, a.face, a.position ?? 'mc', a.angle, a.t)
-      return { p: P.project(loc), opts: a }
+      const side = a.face !== 'top' && a.face !== 'bottom'
+      const ang = a.angle ?? (a.face === 'right' ? 0 : a.face === 'left' ? 180 : a.face === 'back' ? 270 : 90)
+      return {
+        p: P.project(loc),
+        opts: {
+          ...a,
+          basis: a.basis ?? projectedFaceBasis(side ? 'side' : a.face, P.project, ang, rx, ry)
+        }
+      }
     })
     anchorMarkup = renderAnchorsAt(pts, pid)
   }
@@ -321,7 +353,7 @@ export function renderCylinder(raw: CylinderOptions = {}): IsoShapeResult {
   }
   const viewBox = boundsOf(samplesPts, styleMargin(options, maxAnchorExtent(options.anchors)))
 
-  const markup = `<defs>${defs}</defs>` + shadowMarkup + body + anchorMarkup
+  const markup = `<defs>${defs}</defs>` + shadowMarkup + body + fx.markup + anchorMarkup
   return {
     svg: wrapSvg(markup, viewBox),
     markup,

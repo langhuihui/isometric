@@ -1,5 +1,6 @@
 /**
- * 等距 SVG 锚点（端口）—— 屏幕对齐，不随形体透视变形
+ * 等距 SVG 锚点（端口）
+ * 有 basis 时按所在面仿射贴合；没有则屏幕对齐（图例/独立绘制）。
  */
 
 import {
@@ -39,8 +40,10 @@ export interface AnchorOptions {
   strokeWidth?: number
   glow?: boolean
   opacity?: number
-  /** 屏幕旋转角（度），arrow / dash 用 */
+  /** 屏幕旋转角（度），arrow / dash 用；有 basis 时在面内旋转 */
   rotate?: number
+  /** 面切向量（屏幕空间）。由 RoundedBox / Cylinder 填入 */
+  basis?: { u: Vec2; v: Vec2 }
 }
 
 export interface ShapeAnchor extends AnchorOptions {
@@ -77,13 +80,27 @@ export function renderAnchor(x: number, y: number, options: AnchorOptions = {}, 
 
   const inner = drawStyle(style, s, fillCss, strokeCss, sw)
   const filter = options.glow ? ` filter="url(#${pid}-g)"` : ''
-  const t = rot
-    ? `translate(${fmt(x)} ${fmt(y)}) rotate(${fmt(rot)})`
-    : `translate(${fmt(x)} ${fmt(y)})`
+  const t = faceTransform(x, y, rot, options.basis)
   const opacity = op < 0.999 ? ` opacity="${fmt(op)}"` : ''
 
   return (defs ? `<defs>${defs}</defs>` : '') +
     `<g${filter}${opacity} transform="${t}">${inner}</g>`
+}
+
+/** 保留面投影的长宽比，几何平均归一化，让 size 仍是大约的屏幕像素 */
+function faceTransform(x: number, y: number, rot: number, basis?: { u: Vec2; v: Vec2 }): string {
+  if (!basis) {
+    return rot
+      ? `translate(${fmt(x)} ${fmt(y)}) rotate(${fmt(rot)})`
+      : `translate(${fmt(x)} ${fmt(y)})`
+  }
+  const su = Math.hypot(basis.u[0], basis.u[1]) || 1
+  const sv = Math.hypot(basis.v[0], basis.v[1]) || 1
+  const g = Math.sqrt(su * sv)
+  const ux = basis.u[0] / g, uy = basis.u[1] / g
+  const vx = basis.v[0] / g, vy = basis.v[1] / g
+  const m = `matrix(${fmt(ux)} ${fmt(uy)} ${fmt(vx)} ${fmt(vy)} ${fmt(x)} ${fmt(y)})`
+  return rot ? `${m} rotate(${fmt(rot)})` : m
 }
 
 function drawStyle(
@@ -94,34 +111,35 @@ function drawStyle(
   sw: number
 ): string {
   const r = fmt(s)
+  const ve = 'vector-effect="non-scaling-stroke"'
   switch (style) {
     case 'ring':
-      return `<circle cx="0" cy="0" r="${r}" fill="none" stroke="${fill}" stroke-width="${fmt(sw + 0.6)}"/>`
+      return `<circle cx="0" cy="0" r="${r}" fill="none" stroke="${fill}" stroke-width="${fmt(sw + 0.6)}" ${ve}/>`
     case 'double':
-      return `<circle cx="0" cy="0" r="${r}" fill="none" stroke="${fill}" stroke-width="${fmt(sw)}"/>` +
+      return `<circle cx="0" cy="0" r="${r}" fill="none" stroke="${fill}" stroke-width="${fmt(sw)}" ${ve}/>` +
         `<circle cx="0" cy="0" r="${fmt(s * 0.38)}" fill="${fill}"/>`
     case 'diamond':
       return `<path d="M0 ${fmt(-s)} L${r} 0 L0 ${r} L${fmt(-s)} 0 Z" ` +
-        `fill="${fill}" stroke="${stroke}" stroke-width="${fmt(sw)}" stroke-linejoin="round"/>`
+        `fill="${fill}" stroke="${stroke}" stroke-width="${fmt(sw)}" stroke-linejoin="round" ${ve}/>`
     case 'square':
       return `<rect x="${fmt(-s * 0.78)}" y="${fmt(-s * 0.78)}" width="${fmt(s * 1.56)}" height="${fmt(s * 1.56)}" ` +
-        `rx="1.2" fill="${fill}" stroke="${stroke}" stroke-width="${fmt(sw)}"/>`
+        `rx="1.2" fill="${fill}" stroke="${stroke}" stroke-width="${fmt(sw)}" ${ve}/>`
     case 'plus':
       return `<path d="M0 ${fmt(-s)} L0 ${r} M${fmt(-s)} 0 L${r} 0" ` +
-        `fill="none" stroke="${fill}" stroke-width="${fmt(sw)}" stroke-linecap="round"/>`
+        `fill="none" stroke="${fill}" stroke-width="${fmt(sw)}" stroke-linecap="round" ${ve}/>`
     case 'cross':
       return `<path d="M${fmt(-s * 0.78)} ${fmt(-s * 0.78)} L${fmt(s * 0.78)} ${fmt(s * 0.78)} ` +
         `M${fmt(s * 0.78)} ${fmt(-s * 0.78)} L${fmt(-s * 0.78)} ${fmt(s * 0.78)}" ` +
-        `fill="none" stroke="${fill}" stroke-width="${fmt(sw)}" stroke-linecap="round"/>`
+        `fill="none" stroke="${fill}" stroke-width="${fmt(sw)}" stroke-linecap="round" ${ve}/>`
     case 'pin':
       return `<path d="M0 ${fmt(s * 1.15)} C${fmt(-s)} ${fmt(s * 0.15)} ${fmt(-s * 0.95)} ${fmt(-s)} 0 ${fmt(-s)} ` +
         `C${fmt(s * 0.95)} ${fmt(-s)} ${r} ${fmt(s * 0.15)} 0 ${fmt(s * 1.15)}Z" ` +
-        `fill="${fill}" stroke="${stroke}" stroke-width="${fmt(sw * 0.8)}" stroke-linejoin="round"/>` +
+        `fill="${fill}" stroke="${stroke}" stroke-width="${fmt(sw * 0.8)}" stroke-linejoin="round" ${ve}/>` +
         `<circle cx="0" cy="${fmt(-s * 0.28)}" r="${fmt(s * 0.32)}" fill="${stroke}"/>`
     case 'arrow':
       return `<path d="M0 ${fmt(-s)} L${fmt(s * 0.85)} ${fmt(s * 0.55)} L0 ${fmt(s * 0.15)} ` +
         `L${fmt(-s * 0.85)} ${fmt(s * 0.55)} Z" ` +
-        `fill="${fill}" stroke="${stroke}" stroke-width="${fmt(sw)}" stroke-linejoin="round"/>`
+        `fill="${fill}" stroke="${stroke}" stroke-width="${fmt(sw)}" stroke-linejoin="round" ${ve}/>`
     case 'hex': {
       const pts: string[] = []
       for (let i = 0; i < 6; i++) {
@@ -129,14 +147,14 @@ function drawStyle(
         pts.push(`${fmt(s * Math.cos(a))} ${fmt(s * Math.sin(a))}`)
       }
       return `<polygon points="${pts.join(' ')}" fill="${fill}" stroke="${stroke}" ` +
-        `stroke-width="${fmt(sw)}" stroke-linejoin="round"/>`
+        `stroke-width="${fmt(sw)}" stroke-linejoin="round" ${ve}/>`
     }
     case 'dash':
       return `<path d="M${fmt(-s * 1.1)} 0 L${fmt(s * 1.1)} 0" ` +
-        `fill="none" stroke="${fill}" stroke-width="${fmt(Math.max(2.2, sw + 0.8))}" stroke-linecap="round"/>`
+        `fill="none" stroke="${fill}" stroke-width="${fmt(Math.max(2.2, sw + 0.8))}" stroke-linecap="round" ${ve}/>`
     case 'dot':
     default:
-      return `<circle cx="0" cy="0" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${fmt(sw)}"/>`
+      return `<circle cx="0" cy="0" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${fmt(sw)}" ${ve}/>`
   }
 }
 

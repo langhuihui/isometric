@@ -27,11 +27,23 @@
       border-radius: 12px;
       padding: 20px;
     }
+    .tune-panel { flex: 1 1 100%; }
 
-    /* ---------- 调参区 ---------- */
-    .playground { display: flex; gap: 24px; flex-wrap: wrap; }
+    /* ---------- 调参区：左控件 | 预览 | 右控件 ---------- */
+    .playground {
+      display: grid;
+      grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(240px, 300px);
+      gap: 20px;
+      align-items: stretch;
+    }
 
-    .controls { width: 300px; display: flex; flex-direction: column; gap: 10px; max-height: 520px; overflow-y: auto; padding-right: 4px; }
+    .controls {
+      display: flex; flex-direction: column; gap: 10px;
+      max-height: min(72vh, 680px);
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .stage-col { display: flex; flex-direction: column; min-width: 0; }
     .ctl-group { font-size: 11px; color: #7a7ab0; letter-spacing: .04em; text-transform: uppercase; margin: 6px 0 2px; }
     .shape-tabs { display: flex; gap: 4px; }
     .shape-tabs button {
@@ -68,7 +80,9 @@
     .presets button:hover { background: #33336a; }
 
     .stage {
-      width: 420px; height: 420px;
+      flex: 1;
+      min-height: 480px;
+      height: min(72vh, 680px);
       background:
         radial-gradient(circle at 50% 42%, #23234d 0%, #15152f 70%);
       border: 1px solid #2b2b55;
@@ -76,8 +90,25 @@
       display: flex; align-items: center; justify-content: center;
       overflow: hidden;
     }
+    .stage svg { max-width: 92%; max-height: 92%; }
+    .stage.theme-navy-glass {
+      background: radial-gradient(circle at 50% 40%, #163050 0%, #071018 72%);
+    }
+    .stage.theme-light-plate { background: #e8dcc8; }
+    .ctl input[type="text"],
+    .ctl select {
+      flex: 1; min-width: 0; background: #1e1e3a; color: #e6e6f5;
+      border: 1px solid #3a3a70; border-radius: 6px; padding: 4px 8px; font-size: 12px;
+    }
 
     .meta { font-size: 12px; color: #77779a; margin-top: 10px; line-height: 1.7; }
+
+    @media (max-width: 1080px) {
+      .playground { grid-template-columns: 1fr; }
+      .stage-col { order: -1; }
+      .stage { height: 420px; min-height: 360px; }
+      .controls { max-height: none; }
+    }
     .meta b { color: #aab6ff; font-weight: 600; }
 
     /* ---------- 组合场景 ---------- */
@@ -86,13 +117,6 @@
 
     .node-group { cursor: pointer; transition: filter .15s; }
     .node-group:hover { filter: brightness(1.18) drop-shadow(0 0 6px rgba(120,150,255,.55)); }
-
-    .flow-line {
-      fill: none; stroke-linecap: round;
-      stroke-dasharray: 6 8;
-      animation: flow 1s linear infinite;
-    }
-    @keyframes flow { to { stroke-dashoffset: -14; } }
 
     code.inline {
       background: #26264d; padding: 1px 6px; border-radius: 4px;
@@ -109,7 +133,7 @@
 
   <div class="layout">
     <!-- ==================== 参数调试 ==================== -->
-    <div class="panel">
+    <div class="panel tune-panel">
       <h2>参数调试</h2>
       <div class="playground">
         <div class="controls">
@@ -142,6 +166,11 @@
           </div>
           <div class="ctl-group">外观</div>
           <div class="shape-tabs" style="margin-bottom:8px">
+            <button type="button" data-theme="dark-product">深色产品</button>
+            <button type="button" data-theme="navy-glass">暗色玻璃</button>
+            <button type="button" data-theme="light-plate">浅色底板</button>
+          </div>
+          <div class="shape-tabs" style="margin-bottom:8px">
             <button type="button" data-mat="" class="on">自定义</button>
             <button type="button" data-mat="matte">哑光</button>
             <button type="button" data-mat="plastic">塑料</button>
@@ -154,35 +183,65 @@
           <div class="ctl"><label>透明度</label><input type="range" id="op" min="15" max="100" value="100"><span class="val" id="op-v"></span></div>
           <div class="ctl"><label>描边</label><input type="checkbox" id="do-stroke"><input type="color" id="c-stroke" value="#e8eeff"></div>
           <div class="ctl"><label>描边宽</label><input type="range" id="sw" min="0.5" max="5" step="0.1" value="1.4"><span class="val" id="sw-v"></span></div>
+          <div class="ctl"><label>颗粒</label><input type="range" id="grain" min="0" max="100" value="0"><span class="val" id="grain-v"></span></div>
+          <div class="ctl box-only"><label>网格</label><input type="range" id="grid" min="0" max="80" value="0"><span class="val" id="grid-v"></span></div>
+          <div class="ctl"><label>标签</label><input type="text" id="shape-label" placeholder="顶面文字" maxlength="16"></div>
+        </div>
+
+        <div class="stage-col">
+          <div class="stage" id="stage"></div>
+          <div class="meta" id="meta"></div>
+        </div>
+
+        <div class="controls">
+          <div class="ctl-group">表面</div>
           <div class="ctl"><label>阴影</label><input type="checkbox" id="shadow" checked></div>
           <div class="ctl"><label>边缘高光</label><input type="checkbox" id="rim" checked></div>
           <div class="ctl"><label>AO</label><input type="checkbox" id="ao"></div>
           <div class="ctl"><label>斜切</label><input type="checkbox" id="bevel"></div>
           <div class="ctl"><label>发光</label><input type="checkbox" id="glow"><input type="color" id="c-glow" value="#7fa8ef"></div>
+          <div class="ctl-group">装饰</div>
+          <div class="ctl"><label>闪灯</label><input type="checkbox" id="fx-leds"></div>
+          <div class="ctl"><label>闪灯 Hz</label><input type="range" id="led-hz" min="0" max="4" step="0.1" value="0.8"><span class="val" id="led-hz-v"></span></div>
+          <div class="ctl"><label>风扇</label><input type="checkbox" id="fx-fan"></div>
+          <div class="ctl"><label>风扇面</label>
+            <select id="fan-face">
+              <option value="top">顶面</option>
+              <option value="front">前面</option>
+              <option value="right">右面</option>
+              <option value="left">左面</option>
+              <option value="back">后面</option>
+            </select>
+          </div>
+          <div class="ctl"><label>风扇 U</label><input type="range" id="fan-u" min="8" max="92" value="50"><span class="val" id="fan-u-v"></span></div>
+          <div class="ctl"><label>风扇 V</label><input type="range" id="fan-v" min="8" max="92" value="50"><span class="val" id="fan-v-v"></span></div>
+          <div class="ctl"><label>全息</label><input type="checkbox" id="fx-holo"></div>
+          <div class="ctl"><label>面板</label><input type="checkbox" id="fx-panel"></div>
+          <div class="ctl"><label>霓虹</label><input type="checkbox" id="fx-neon"></div>
           <div class="ctl-group">锚点</div>
           <div class="ctl"><label>显示锚点</label><input type="checkbox" id="show-anc"></div>
           <div class="anchor-grid" id="anchor-grid"></div>
           <div class="presets">
             <button data-preset="device">电源盒</button>
+            <button data-preset="server">机箱</button>
             <button data-preset="chip">扁平芯片</button>
             <button data-preset="tower">机柜</button>
             <button data-preset="pill">胶囊</button>
             <button data-preset="sharp">直角</button>
             <button data-preset="glass">玻璃</button>
+            <button data-preset="plate">底板</button>
             <button data-preset="db">数据库</button>
             <button data-preset="barrel">桶</button>
             <button data-preset="coin">硬币</button>
           </div>
-          <div class="meta" id="meta"></div>
         </div>
-        <div class="stage" id="stage"></div>
       </div>
     </div>
 
     <!-- ==================== 声明式组件 ==================== -->
     <div class="panel">
-      <h2>声明式用法 · &lt;iso-rounded-cube&gt; / &lt;iso-cylinder&gt;</h2>
-      <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap">
+      <h2>声明式用法 · &lt;iso-rounded-cube&gt; / &lt;iso-cylinder&gt; / 道具</h2>
+      <div style="display:flex; gap:18px; align-items:flex-end; flex-wrap:wrap">
         <iso-rounded-cube width="130" height="130" depth="44" radius="40"
           color="#8a5cf6" material="plastic" shadow
           top-color="#1c1626" show-anchors anchor-style="ring"></iso-rounded-cube>
@@ -193,6 +252,8 @@
           show-anchors anchor-style="double"></iso-cylinder>
         <iso-cylinder radius-x="58" radius-y="36" depth="40"
           color="#e8a94f" material="metal" shadow top-rings="2"></iso-cylinder>
+        <iso-person color="#8a5cf6"></iso-person>
+        <iso-plant></iso-plant>
       </div>
       <pre style="margin-top:14px; background:#12122b; border-radius:8px; padding:12px; font-size:12px; color:#9fd8ff; overflow:auto">&lt;iso-rounded-cube width="130" height="130" depth="44" radius="40"
   color="#8a5cf6" material="plastic" shadow top-color="#1c1626"
@@ -210,8 +271,13 @@
       <p class="subtitle" style="margin-bottom:12px">
         节点由 <code class="inline">renderRoundedBox()</code> / <code class="inline">renderCylinder()</code> 生成，
         通过 <code class="inline">projectPoint()</code> 摆放世界坐标、
-        <code class="inline">viewDepth()</code> 做遮挡排序，连线与标签为普通 SVG 元素。
+        <code class="inline">viewDepth()</code> 做遮挡排序，连线由 <code class="inline">renderIsoLink()</code> 画正交折线。
       </p>
+      <div class="ctl" style="max-width:320px;margin-bottom:12px">
+        <label>爆炸视图</label>
+        <input type="range" id="explode" min="0" max="70" value="0">
+        <span class="val" id="explode-v">0</span>
+      </div>
       <div id="scene-holder"></div>
     </div>
   </div>
@@ -219,9 +285,12 @@
   <script type="module">
     import { renderRoundedBox, projectPoint, viewDepth } from './src/core/RoundedBox'
     import { renderCylinder } from './src/core/Cylinder'
+    import { isoLinkStyle, renderIsoLink } from './src/core/IsoLink'
+    import { renderIsoPerson, renderIsoPlant } from './src/core/IsoProps'
     import { initShapePlayground } from './src/playground'
     import './src/components/IsoRoundedCube.ts'
     import './src/components/IsoCylinder.ts'
+    import './src/components/IsoPerson.ts'
 
     initShapePlayground()
 
@@ -230,19 +299,20 @@
     const RX = 60, RZ = 45
     const at = (x, y, z) => projectPoint(x, y, z, RX, RZ)
 
+    const LAYER = { platform: 0, client: 1, gateway: 2, 'svc-a': 3, 'svc-b': 3, db: 4, cache: 4 }
     const nodes = [
       { id: 'platform', x: -40, y: -40, z: -26, w: 560, h: 460, d: 26, r: 13,
         colors: { top: '#20204a', front: '#181838', right: '#131330' }, label: '' },
       { id: 'client', x: 0, y: 300, z: 0, w: 96, h: 96, d: 64, r: 20,
-        colors: { top: '#ffd47f', front: '#e8a94f', right: '#c4842e' }, label: '客户端' },
+        colors: { top: '#ffd47f', front: '#e8a94f', right: '#c4842e' }, label: '客户端', leds: 3, panel: 'CLIENT' },
       { id: 'gateway', x: 190, y: 170, z: 0, w: 110, h: 110, d: 84, r: 26,
-        colors: { top: '#7fa8ef', front: '#4f7fd9', right: '#3763b0' }, label: '网关' },
+        colors: { top: '#7fa8ef', front: '#4f7fd9', right: '#3763b0' }, label: '网关', leds: 4, ledHz: 1.4, fan: true, fanU: 0.28, fanV: 0.3, neon: true },
       { id: 'svc-a', x: 60, y: 20, z: 0, w: 96, h: 96, d: 72, r: 22,
-        colors: { top: '#8fe3b8', front: '#54bd8b', right: '#3a9a6e' }, label: '服务 A' },
+        colors: { top: '#8fe3b8', front: '#54bd8b', right: '#3a9a6e' }, label: '服务 A', neon: '#5eead4' },
       { id: 'svc-b', x: 330, y: 20, z: 0, w: 96, h: 96, d: 72, r: 22,
         colors: { top: '#c9a4f2', front: '#9d6fd6', right: '#7c50b4' }, label: '服务 B' },
       { id: 'db', x: 200, y: -120, z: 0, w: 88, h: 88, d: 120, r: 34, kind: 'cyl', rings: 2,
-        colors: { top: '#8ad8e8', front: '#4fa8c4', right: '#3a84a0' }, label: '数据库' },
+        colors: { top: '#8ad8e8', front: '#4fa8c4', right: '#3a84a0' }, label: '数据库', hologram: 'DB', leds: 3 },
       { id: 'cache', x: 380, y: -110, z: 0, w: 70, h: 70, d: 46, r: 18, kind: 'cyl', rings: 0,
         colors: { top: '#f79a9a', front: '#d96a6a', right: '#b44c4c' }, label: '缓存' }
     ]
@@ -259,22 +329,30 @@
 
     function buildScene() {
       const parts = []
+      const explode = +((document.getElementById('explode') || {}).value || 0)
+      const lifted = nodes.map(n => ({ ...n, z: n.z + explode * (LAYER[n.id] || 0) }))
 
       // 遮挡排序：按盒中心的观察深度，由远及近
-      const sorted = [...nodes].sort((a, b) =>
+      const sorted = [...lifted].sort((a, b) =>
         viewDepth(a.x + a.w / 2, a.y + a.h / 2, a.z + a.d / 2, RX, RZ) -
         viewDepth(b.x + b.w / 2, b.y + b.h / 2, b.z + b.d / 2, RX, RZ))
 
-      const topCenter = n => at(n.x + n.w / 2, n.y + n.h / 2, n.z + n.d)
+      const topWorld = n => [n.x + n.w / 2, n.y + n.h / 2, n.z + n.d]
+      const byId = Object.fromEntries(lifted.map(n => [n.id, n]))
 
-      // 连线画在平台之上、节点之下
-      const linesMarkup = links.map(l => {
-        const a = topCenter(nodes.find(n => n.id === l.from))
-        const b = topCenter(nodes.find(n => n.id === l.to))
-        const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2 - 30
-        return `<path class="flow-line" stroke="${l.color}" stroke-width="2.5" opacity="0.9"
-                  d="M${a[0]} ${a[1]} Q${mx} ${my} ${b[0]} ${b[1]}"/>`
-      }).join('')
+      // 连线画在平台之上、节点之下（世界坐标正交折线 → 渐变 / 发光 / 流向）
+      const linkBits = links.map((l, i) => {
+        const a = byId[l.from], b = byId[l.to]
+        return renderIsoLink({
+          from: topWorld(a), to: topWorld(b),
+          fromFace: 'top', toFace: 'top',
+          route: 'auto', perpLength: 18, bendRadius: 14,
+          color: l.color, width: 2.5, glow: true, flow: true, arrow: true,
+          rotateX: RX, rotateZ: RZ, id: `dl${i}`
+        })
+      })
+      const linesDefs = isoLinkStyle() + linkBits.map(l => l.defs).join('')
+      const linesMarkup = linkBits.map(l => l.markup).join('')
 
       for (const n of sorted) {
         const box = n.kind === 'cyl'
@@ -282,13 +360,17 @@
               radiusX: n.w / 2, radiusY: n.h / 2, depth: n.d, rings: n.rings ?? 2,
               rotateX: RX, rotateZ: RZ, colors: n.colors,
               material: 'plastic',
-              shadow: n.id !== 'platform', shadowOpacity: 0.35, id: `sc-${n.id}`
+              shadow: n.id !== 'platform', shadowOpacity: 0.35, id: `sc-${n.id}`,
+              leds: n.leds, ledHz: n.ledHz, hologram: n.hologram, fan: n.fan, fanU: n.fanU, fanV: n.fanV, neon: n.neon, panel: n.panel
             })
           : renderRoundedBox({
               width: n.w, height: n.h, depth: n.d, radius: n.r,
               rotateX: RX, rotateZ: RZ, colors: n.colors,
               material: n.id === 'platform' ? undefined : 'plastic',
-              shadow: n.id !== 'platform', shadowOpacity: 0.35, id: `sc-${n.id}`
+              shadow: n.id !== 'platform', shadowOpacity: 0.35, id: `sc-${n.id}`,
+              grid: n.id === 'platform' ? 40 : undefined,
+              grain: n.id === 'platform' ? 0.12 : undefined,
+              leds: n.leds, ledHz: n.ledHz, fan: n.fan, fanU: n.fanU, fanV: n.fanV, hologram: n.hologram, neon: n.neon, panel: n.panel
             })
         const [ox, oy] = at(n.x, n.y, n.z)
 
@@ -310,11 +392,20 @@
       }
 
       const under = parts.filter(p => !p.afterLines).map(p => p.markup).join('')
-      const over = parts.filter(p => p.afterLines).map(p => p.markup).join('')
+      const over = parts.filter(p => p.afterLines).map(p => p.markup)
+      const person = renderIsoPerson({ id: 'sc-person', color: '#ffd47f', shadow: true })
+      const plant = renderIsoPlant({ id: 'sc-plant', foliage: '#3d9a6e', shadow: true })
+      const [ppx, ppy] = at(-90, 330, explode * 1)
+      const [plx, ply] = at(500, -30, explode * 4)
+      over.push(
+        `<g class="node-group" transform="translate(${ppx} ${ppy})">${person.markup}</g>`,
+        `<g class="node-group" transform="translate(${plx} ${ply})">${plant.markup}</g>`
+      )
+      const overMarkup = over.join('')
 
       // 视口：取所有节点角点投影的包围盒
       let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9
-      for (const n of nodes) {
+      for (const n of lifted) {
         for (const [x, y, z] of [
           [n.x, n.y, n.z], [n.x + n.w, n.y, n.z], [n.x, n.y + n.h, n.z], [n.x + n.w, n.y + n.h, n.z],
           [n.x, n.y, n.z + n.d], [n.x + n.w, n.y, n.z + n.d], [n.x, n.y + n.h, n.z + n.d], [n.x + n.w, n.y + n.h, n.z + n.d]
@@ -324,13 +415,28 @@
           minY = Math.min(minY, sy); maxY = Math.max(maxY, sy)
         }
       }
+      for (const [x, y, z] of [
+        [-110, 310, explode], [ -70, 350, explode + 60],
+        [480, -50, explode * 4], [520, 0, explode * 4 + 50]
+      ]) {
+        const [sx, sy] = at(x, y, z)
+        minX = Math.min(minX, sx); maxX = Math.max(maxX, sx)
+        minY = Math.min(minY, sy); maxY = Math.max(maxY, sy)
+      }
       const pad = 40
       document.getElementById('scene-holder').innerHTML =
         `<svg xmlns="http://www.w3.org/2000/svg"
               viewBox="${minX - pad} ${minY - pad} ${maxX - minX + pad * 2} ${maxY - minY + pad * 2}">
-           ${under}${linesMarkup}${over}
+           <defs>${linesDefs}</defs>
+           ${under}${linesMarkup}${overMarkup}
          </svg>`
     }
+    const explodeEl = document.getElementById('explode')
+    const explodeVal = document.getElementById('explode-v')
+    explodeEl?.addEventListener('input', () => {
+      if (explodeVal) explodeVal.textContent = explodeEl.value
+      buildScene()
+    })
     buildScene()
   </script>
 </body>
