@@ -48,13 +48,13 @@ function applyPanZoom() {
 }
 
 // ========== 初始化 ==========
-document.addEventListener('DOMContentLoaded', () => {
+export function initAdminScene() {
   paint()
   setupAngleControls()
   setupShellToggle()
   setupPanZoom()
   setupNodeDelegation()
-})
+}
 
 // ========== 角度配置 ==========
 function setupAngleControls() {

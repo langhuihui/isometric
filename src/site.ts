@@ -1,10 +1,9 @@
-import './main'
+import { initAdminScene } from './main'
 import { initShapePlayground } from './playground'
 import './components/IsoRoundedCube'
-import './components/IsoCylinder'
-import './components/IsoPerson'
 
 initShapePlayground()
+initAdminScene()
 
 document.querySelectorAll('[data-copy]').forEach(btn => {
   btn.addEventListener('click', async () => {

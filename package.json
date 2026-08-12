@@ -21,7 +21,7 @@
     "./dist/isometric-engine.umd.cjs"
   ],
   "scripts": {
-    "dev": "vite --port=5373",
+    "dev": "vite --port=5373 --config vite.site.config.ts",
     "build": "tsc && vite build",
     "build:site": "vite build --config vite.site.config.ts",
     "preview": "vite preview --config vite.site.config.ts",
