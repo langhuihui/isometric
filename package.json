@@ -2,6 +2,14 @@
   "name": "iso-engine",
   "version": "0.1.1",
   "description": "2.5D isometric engine: SVG rounded boxes + CSS 3D Web Components",
+  "homepage": "https://iso.langhuihui.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/langhuihui/isometric.git"
+  },
+  "bugs": {
+    "url": "https://github.com/langhuihui/isometric/issues"
+  },
   "type": "module",
   "main": "./dist/isometric-engine.umd.cjs",
   "module": "./dist/isometric-engine.js",
@@ -21,10 +29,11 @@
     "./dist/isometric-engine.umd.cjs"
   ],
   "scripts": {
-    "dev": "vite --port=5373 --config vite.site.config.ts",
+    "dev": "node scripts/write-seo.mjs && vite --port=5373 --config vite.site.config.ts",
     "build": "tsc && vite build",
-    "build:site": "vite build --config vite.site.config.ts",
+    "build:site": "node scripts/write-seo.mjs && vite build --config vite.site.config.ts",
     "preview": "vite preview --config vite.site.config.ts",
+    "seo": "node scripts/write-seo.mjs",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [

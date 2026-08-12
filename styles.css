@@ -39,10 +39,19 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 700;
   letter-spacing: -0.03em;
   font-size: 16px;
   color: #fff;
+}
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  display: block;
+  flex-shrink: 0;
 }
 .nav-links { display: flex; gap: 18px; font-size: 13px; color: #9a9ac0; }
 .nav-links a:hover { color: #fff; }
@@ -113,6 +122,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   border: 1px solid rgba(255,255,255,0.07);
   border-radius: 14px; padding: 18px;
 }
+.features h2 { font-size: 14px; color: #fff; margin-bottom: 8px; font-weight: 600; }
 .features h3 { font-size: 14px; color: #fff; margin-bottom: 8px; }
 .features p { font-size: 13px; color: #8e8eae; line-height: 1.55; }
 .features code { font-size: 11px; color: #9fd8ff; }

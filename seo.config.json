@@ -1,0 +1,4 @@
+{
+  "origin": "https://iso.langhuihui.com",
+  "comment": "Production site origin (no trailing slash). Override with SITE_ORIGIN env if needed."
+}

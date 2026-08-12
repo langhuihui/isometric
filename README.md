@@ -1,5 +1,9 @@
 # iso-engine
 
+<p align="center">
+  <img src="public/logo.svg" width="72" height="72" alt="iso-engine">
+</p>
+
 轻量级 2.5D 等距视图引擎。提供两套渲染路径：
 
 | 路径 | 技术 | 适用 |

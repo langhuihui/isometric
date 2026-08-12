@@ -3,12 +3,93 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>iso-engine · 等距 SVG 引擎</title>
+  <title>iso-engine · 等距 SVG 引擎 | 2.5D 可视化</title>
+  <meta name="description" content="轻量级 2.5D 等距视图引擎：SVG 圆角盒、椭圆柱、锚点与连线，无需 Canvas / WebGL。适合架构图、设备面板与可交互场景。">
+  <meta name="keywords" content="iso-engine, isometric, 等距, SVG, 2.5D, rounded box, web components, 可视化, 架构图">
+  <meta name="author" content="iso-engine">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="theme-color" content="#0e0e1c">
+  <meta name="color-scheme" content="dark">
+  <link rel="canonical" href="__SITE_ORIGIN__/">
+  <link rel="alternate" hreflang="zh-CN" href="__SITE_ORIGIN__/">
+  <link rel="alternate" hreflang="x-default" href="__SITE_ORIGIN__/">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:site_name" content="iso-engine">
+  <meta property="og:title" content="iso-engine · 等距 SVG 引擎">
+  <meta property="og:description" content="用矢量拼出 2.5D 等距世界。SVG 圆角盒 / 圆柱 / 锚点连线，零 Canvas / WebGL。">
+  <meta property="og:url" content="__SITE_ORIGIN__/">
+  <meta property="og:image" content="__SITE_ORIGIN__/og-image.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="iso-engine 等距蓝立方体品牌视觉">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="iso-engine · 等距 SVG 引擎">
+  <meta name="twitter:description" content="轻量级 2.5D 等距 SVG 引擎：圆角盒、圆柱、锚点与连线，无需 Canvas / WebGL。">
+  <meta name="twitter:image" content="__SITE_ORIGIN__/og-image.png">
+  <meta name="twitter:image:alt" content="iso-engine 等距蓝立方体品牌视觉">
+
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
   <link rel="stylesheet" href="styles.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "__SITE_ORIGIN__/#website",
+        "url": "__SITE_ORIGIN__/",
+        "name": "iso-engine",
+        "description": "轻量级 2.5D 等距视图引擎：SVG 圆角盒、椭圆柱、锚点与连线，无需 Canvas / WebGL。",
+        "inLanguage": "zh-CN",
+        "publisher": { "@id": "__SITE_ORIGIN__/#software" }
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "__SITE_ORIGIN__/#software",
+        "name": "iso-engine",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any",
+        "description": "2.5D isometric engine: SVG rounded boxes + CSS 3D Web Components",
+        "url": "__SITE_ORIGIN__/",
+        "image": "__SITE_ORIGIN__/og-image.png",
+        "downloadUrl": "https://www.npmjs.com/package/iso-engine",
+        "softwareVersion": "0.1.1",
+        "license": "https://opensource.org/licenses/MIT",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "codeRepository": "https://github.com/langhuihui/isometric"
+      },
+      {
+        "@type": "SoftwareSourceCode",
+        "name": "iso-engine",
+        "codeRepository": "https://github.com/langhuihui/isometric",
+        "programmingLanguage": ["TypeScript", "JavaScript"],
+        "runtimePlatform": "Web",
+        "license": "https://opensource.org/licenses/MIT"
+      }
+    ]
+  }
+  </script>
 </head>
 <body class="site">
-  <nav class="site-nav">
-    <a class="brand" href="#">iso-engine</a>
+  <nav class="site-nav" aria-label="主导航">
+    <a class="brand" href="/">
+      <img class="brand-mark" src="/logo.svg" width="28" height="28" alt="iso-engine">
+      <span>iso-engine</span>
+    </a>
     <div class="nav-links">
       <a href="#features">特性</a>
       <a href="#workshop">形体工坊</a>
@@ -17,6 +98,7 @@
     </div>
   </nav>
 
+  <main id="main">
   <header class="hero">
     <div class="hero-copy">
       <p class="eyebrow">SVG · 正交投影 · 零 Canvas / WebGL</p>
@@ -34,7 +116,7 @@
         </span>
       </div>
     </div>
-    <div class="hero-visual">
+    <div class="hero-visual" aria-hidden="true">
       <iso-rounded-cube width="176" height="140" depth="64" radius="18"
         color="#8a5cf6" material="plastic" shadow bevel grain="0.22"
         top-color="#1c1626" glow glow-color="#8a5cf6" glow-blur="10"
@@ -46,21 +128,21 @@
     </div>
   </header>
 
-  <section class="features" id="features">
+  <section class="features" id="features" aria-label="产品特性">
     <article>
-      <h3>精确圆角盒</h3>
+      <h2>精确圆角盒</h2>
       <p>俯视圆角矩形沿 Z 拉伸。贝塞尔仿射不变，侧面一条路径 + 水平渐变。</p>
     </article>
     <article>
-      <h3>圆柱 / 椭圆柱</h3>
+      <h2>圆柱 / 椭圆柱</h2>
       <p>独立半径、腰线与顶面环。数据库、桶、硬币一类形体开箱即用。</p>
     </article>
     <article>
-      <h3>锚点与连线</h3>
+      <h2>锚点与连线</h2>
       <p>11 种端口样式；场景里正交进出 + 轴对齐折线，弯折可圆角。</p>
     </article>
     <article>
-      <h3>声明式组件</h3>
+      <h2>声明式组件</h2>
       <p><code>&lt;iso-rounded-cube&gt;</code> / <code>&lt;iso-cylinder&gt;</code>。闪灯、风扇、全息、霓虹都是属性。</p>
     </article>
   </section>
@@ -236,10 +318,13 @@
       </aside>
     </div>
   </section>
+  </main>
 
   <footer class="site-foot">
     <span>iso-engine · MIT</span>
-    <nav>
+    <nav aria-label="页脚链接">
+      <a href="https://www.npmjs.com/package/iso-engine" rel="noopener noreferrer">npm</a>
+      <a href="https://github.com/langhuihui/isometric" rel="noopener noreferrer">GitHub</a>
       <a href="demo-rounded.html">圆角 Demo</a>
       <a href="demo-cube.html">Cube</a>
       <a href="demo-connector.html">连线</a>
