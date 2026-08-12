@@ -1,15 +1,9 @@
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
-import dts from 'vite-plugin-dts'
+
+const root = import.meta.dirname
 
 export default defineConfig({
-  plugins: [
-    dts({
-      include: ['src'],
-      outDir: 'dist',
-      rollupTypes: true,
-    }),
-  ],
   oxc: {
     decorator: {
       legacy: true,
@@ -24,20 +18,19 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': resolve(import.meta.dirname, 'src'),
+      '@': resolve(root, 'src'),
     },
   },
   build: {
-    lib: {
-      entry: resolve(import.meta.dirname, 'src/index.ts'),
-      name: 'IsometricEngine',
-      fileName: 'isometric-engine',
-    },
+    outDir: 'dist-site',
+    emptyOutDir: true,
     rolldownOptions: {
-      external: [],
-      output: {
-        exports: 'named',
-        globals: {},
+      input: {
+        main: resolve(root, 'index.html'),
+        'demo-rounded': resolve(root, 'demo-rounded.html'),
+        'demo-cube': resolve(root, 'demo-cube.html'),
+        'demo-console': resolve(root, 'demo-console.html'),
+        'demo-connector': resolve(root, 'demo-connector.html'),
       },
     },
   },
