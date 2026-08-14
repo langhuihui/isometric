@@ -166,6 +166,7 @@
         <div class="pg-tabs">
           <button type="button" data-pg-tab="geo" class="on">几何</button>
           <button type="button" data-pg-tab="look">外观</button>
+          <button type="button" data-pg-tab="shadow">阴影</button>
           <button type="button" data-pg-tab="anchor">锚点</button>
         </div>
 
@@ -217,7 +218,6 @@
           <div class="ctl box-only"><label>网格</label><input type="range" id="grid" min="0" max="80" value="0"><span class="val" id="grid-v"></span></div>
           <div class="ctl"><label>标签</label><input type="text" id="shape-label" placeholder="顶面文字" maxlength="16"></div>
           <div class="ctl checks">
-            <label><input type="checkbox" id="shadow" checked> 阴影</label>
             <label><input type="checkbox" id="rim" checked> 边缘</label>
             <label><input type="checkbox" id="ao" checked> AO</label>
             <label><input type="checkbox" id="bevel"> 斜切</label>
@@ -242,6 +242,26 @@
           </div>
           <div class="ctl"><label>风扇 U</label><input type="range" id="fan-u" min="8" max="92" value="50"><span class="val" id="fan-u-v"></span></div>
           <div class="ctl"><label>风扇 V</label><input type="range" id="fan-v" min="8" max="92" value="50"><span class="val" id="fan-v-v"></span></div>
+        </div>
+
+        <div data-pg-pane="shadow" hidden>
+          <div class="ctl checks">
+            <label><input type="checkbox" id="shadow" checked> 启用阴影</label>
+          </div>
+          <div class="ctl-sub">深色 · 本影</div>
+          <div class="ctl"><label>位移 X</label><input type="range" id="su-dx" min="-80" max="80" value="13"><span class="val" id="su-dx-v"></span></div>
+          <div class="ctl"><label>位移 Y</label><input type="range" id="su-dy" min="-80" max="80" value="-8"><span class="val" id="su-dy-v"></span></div>
+          <div class="ctl"><label>大小</label><input type="range" id="su-scale" min="40" max="250" value="107"><span class="val" id="su-scale-v"></span></div>
+          <div class="ctl"><label>拉伸</label><input type="range" id="su-stretch" min="0" max="150" value="19"><span class="val" id="su-stretch-v"></span></div>
+          <div class="ctl"><label>透明度</label><input type="range" id="su-op" min="0" max="100" value="70"><span class="val" id="su-op-v"></span></div>
+          <div class="ctl"><label>模糊</label><input type="range" id="su-blur" min="0" max="24" step="0.5" value="7.5"><span class="val" id="su-blur-v"></span></div>
+          <div class="ctl-sub">浅色 · 半影</div>
+          <div class="ctl"><label>位移 X</label><input type="range" id="sp-dx" min="-80" max="80" value="54"><span class="val" id="sp-dx-v"></span></div>
+          <div class="ctl"><label>位移 Y</label><input type="range" id="sp-dy" min="-80" max="80" value="-12"><span class="val" id="sp-dy-v"></span></div>
+          <div class="ctl"><label>大小</label><input type="range" id="sp-scale" min="40" max="250" value="88"><span class="val" id="sp-scale-v"></span></div>
+          <div class="ctl"><label>拉伸</label><input type="range" id="sp-stretch" min="0" max="150" value="28"><span class="val" id="sp-stretch-v"></span></div>
+          <div class="ctl"><label>透明度</label><input type="range" id="sp-op" min="0" max="100" value="38"><span class="val" id="sp-op-v"></span></div>
+          <div class="ctl"><label>模糊</label><input type="range" id="sp-blur" min="0" max="24" step="0.5" value="12"><span class="val" id="sp-blur-v"></span></div>
         </div>
 
         <div data-pg-pane="anchor" hidden>

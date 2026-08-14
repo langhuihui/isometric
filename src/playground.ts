@@ -27,7 +27,9 @@ const SLIDERS = [
   'w', 'h', 'd', 'r', 'rx', 'rz', 'stops',
   'rxr', 'ryr', 'rings', 'top-rings',
   'thi', 'spec', 'shade', 'op', 'sw', 'grain', 'grid',
-  'led-hz', 'fan-u', 'fan-v'
+  'led-hz', 'fan-u', 'fan-v',
+  'su-dx', 'su-dy', 'su-scale', 'su-stretch', 'su-op', 'su-blur',
+  'sp-dx', 'sp-dy', 'sp-scale', 'sp-stretch', 'sp-op', 'sp-blur'
 ]
 
 const PRESETS: Record<string, Record<string, unknown>> = {
@@ -169,6 +171,22 @@ export function initShapePlayground(): void {
       gradientStops: +(($('stops') as HTMLInputElement)?.value || 8),
       material: material || undefined,
       shadow: ($('shadow') as HTMLInputElement | null)?.checked ?? true,
+      shadowUmbra: {
+        dx: +(($('su-dx') as HTMLInputElement)?.value || 13),
+        dy: +(($('su-dy') as HTMLInputElement)?.value || -8),
+        scale: +(($('su-scale') as HTMLInputElement)?.value || 107) / 100,
+        stretch: +(($('su-stretch') as HTMLInputElement)?.value || 19) / 100,
+        opacity: +(($('su-op') as HTMLInputElement)?.value || 70) / 100,
+        blur: +(($('su-blur') as HTMLInputElement)?.value || 7.5)
+      },
+      shadowPenumbra: {
+        dx: +(($('sp-dx') as HTMLInputElement)?.value || 54),
+        dy: +(($('sp-dy') as HTMLInputElement)?.value || -12),
+        scale: +(($('sp-scale') as HTMLInputElement)?.value || 88) / 100,
+        stretch: +(($('sp-stretch') as HTMLInputElement)?.value || 28) / 100,
+        opacity: +(($('sp-op') as HTMLInputElement)?.value || 38) / 100,
+        blur: +(($('sp-blur') as HTMLInputElement)?.value || 12)
+      },
       rim: ($('rim') as HTMLInputElement | null)?.checked ?? true,
       ao: ($('ao') as HTMLInputElement | null)?.checked ?? false,
       bevel: ($('bevel') as HTMLInputElement | null)?.checked ?? false,

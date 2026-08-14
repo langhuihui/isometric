@@ -334,14 +334,14 @@ export const MATERIALS: Record<MaterialName, Partial<IsoShapeStyle>> = {
     rim: true, rimWidth: 0.9, rimOpacity: 0.55,
     ao: true, aoStrength: 0.22, bevel: false, glow: false,
     grain: 0.08, innerRim: false,
-    shadow: true, shadowOpacity: 0.28, shadowCast: 0.85
+    shadow: true, shadowOpacity: 0.9, shadowCast: 0.85
   },
   plastic: {
     topHighlight: 0.42, specular: 0.45, shade: 0.62,
     rim: true, rimWidth: 1.2, rimOpacity: 0.85,
     ao: true, aoStrength: 0.28, bevel: true, glow: false,
     grain: 0.06, innerRim: false,
-    shadow: true, shadowOpacity: 0.3, shadowCast: 1
+    shadow: true, shadowOpacity: 0.94, shadowCast: 1
   },
   glass: {
     opacity: 0.52, topHighlight: 0.72, specular: 0.58, shade: 0.72,
@@ -349,14 +349,14 @@ export const MATERIALS: Record<MaterialName, Partial<IsoShapeStyle>> = {
     stroke: 'rgba(210,230,255,0.45)', strokeWidth: 1.05,
     glow: true, glowBlur: 9, ao: false, bevel: true,
     grain: 0.48, innerRim: true,
-    shadow: true, shadowOpacity: 0.2, shadowCast: 1.15
+    shadow: true, shadowOpacity: 0.72, shadowCast: 1.15
   },
   metal: {
     topHighlight: 0.55, specular: 0.9, shade: 0.48,
     rim: true, rimWidth: 1.4, rimOpacity: 0.9,
     ao: true, aoStrength: 0.18, bevel: true, glow: false,
     grain: 0.22, innerRim: false,
-    shadow: true, shadowOpacity: 0.32, shadowCast: 1
+    shadow: true, shadowOpacity: 0.96, shadowCast: 1
   }
 }
 
@@ -384,6 +384,28 @@ export function applyMaterial<T extends IsoShapeStyle>(options: T): T {
     if (v !== undefined) merged[key] = v
   }
   return merged
+}
+
+export interface ShadowLayer {
+  /** 0–1 */
+  opacity?: number
+  /** 相对底面投影的缩放，1 = 贴合底面 */
+  scale?: number
+  /** 屏幕位移（px） */
+  dx?: number
+  dy?: number
+  /** 向下拉伸，相对底面投影高度的倍率 */
+  stretch?: number
+  /** 高斯模糊半径 */
+  blur?: number
+}
+
+export const DEFAULT_SHADOW_UMBRA: Required<ShadowLayer> = {
+  opacity: 0.7, scale: 1.07, dx: 13, dy: -8, stretch: 0.19, blur: 7.5
+}
+
+export const DEFAULT_SHADOW_PENUMBRA: Required<ShadowLayer> = {
+  opacity: 0.38, scale: 0.88, dx: 54, dy: -12, stretch: 0.28, blur: 12
 }
 
 export interface IsoShapeStyle {
@@ -421,6 +443,10 @@ export interface IsoShapeStyle {
   shadowOpacity?: number
   /** 投射阴影长度倍率，0 = 仅接触阴影，默认 1 */
   shadowCast?: number
+  /** 深色本影（可调位移 / 大小 / 拉伸 / 透明度 / 模糊） */
+  shadowUmbra?: ShadowLayer
+  /** 浅色半影 */
+  shadowPenumbra?: ShadowLayer
   /** 表面颗粒 0–1，玻璃/金属用 */
   grain?: number
   /** 顶面内沿高光 + 轮廓压暗（真玻璃） */
@@ -460,7 +486,16 @@ export interface IsoShapeResult {
 
 export function styleMargin(style: IsoShapeStyle, extra = 0): number {
   let m = 2
-  if (style.shadow) m = Math.max(m, 20 + (style.shadowCast ?? 1) * 24)
+  if (style.shadow) {
+    const u = { ...DEFAULT_SHADOW_UMBRA, ...style.shadowUmbra }
+    const p = { ...DEFAULT_SHADOW_PENUMBRA, ...style.shadowPenumbra }
+    const reach = Math.max(
+      Math.abs(u.dx) + Math.abs(u.dy) + u.scale * 24 + u.stretch * 48 + u.blur * 3,
+      Math.abs(p.dx) + Math.abs(p.dy) + p.scale * 24 + p.stretch * 48 + p.blur * 3,
+      16
+    )
+    m = Math.max(m, reach)
+  }
   if (style.glow) m = Math.max(m, (style.glowBlur ?? 8) * 2 + 6)
   if (style.stroke) m = Math.max(m, (style.strokeWidth ?? 1.4) + 2)
   if ((style.grain ?? 0) > 0) m = Math.max(m, 8)
@@ -477,35 +512,115 @@ export function shadowOffset(
   depth: number,
   cast = 1
 ): Vec2 {
-  const len = Math.max(6, depth * 0.32 * clamp(cast, 0, 3))
+  const len = Math.max(4, depth * 0.18 * clamp(cast, 0, 3))
   const a = project([0, 0, 0])
   const b = project([0.62 * len, -0.38 * len, 0])
   return [b[0] - a[0], b[1] - a[1]]
 }
 
+function centroid(pts: Vec2[]): Vec2 {
+  let x = 0, y = 0
+  for (const p of pts) { x += p[0]; y += p[1] }
+  const n = pts.length || 1
+  return [x / n, y / n]
+}
+
+function scaleAbout(pts: Vec2[], origin: Vec2, s: number): Vec2[] {
+  return pts.map(p => [
+    origin[0] + (p[0] - origin[0]) * s,
+    origin[1] + (p[1] - origin[1]) * s
+  ])
+}
+
+function diamondPath(pts: Vec2[]): string {
+  return `M${fmt(pts[0][0])} ${fmt(pts[0][1])}` +
+    pts.slice(1).map(p => `L${fmt(p[0])} ${fmt(p[1])}`).join('') + 'Z'
+}
+
+function roundedPolygonPath(pts: Vec2[], radiusRatio = 0.34): string {
+  const n = pts.length
+  if (n < 3) return diamondPath(pts)
+  let d = ''
+  for (let i = 0; i < n; i++) {
+    const prev = pts[(i - 1 + n) % n]
+    const curr = pts[i]
+    const next = pts[(i + 1) % n]
+    const v0x = prev[0] - curr[0], v0y = prev[1] - curr[1]
+    const v1x = next[0] - curr[0], v1y = next[1] - curr[1]
+    const l0 = Math.hypot(v0x, v0y) || 1
+    const l1 = Math.hypot(v1x, v1y) || 1
+    const r = Math.min(l0, l1) * clamp(radiusRatio, 0.08, 0.48)
+    const a: Vec2 = [curr[0] + (v0x / l0) * r, curr[1] + (v0y / l0) * r]
+    const b: Vec2 = [curr[0] + (v1x / l1) * r, curr[1] + (v1y / l1) * r]
+    if (i === 0) d += `M${fmt(a[0])} ${fmt(a[1])}`
+    else d += `L${fmt(a[0])} ${fmt(a[1])}`
+    d += `Q${fmt(curr[0])} ${fmt(curr[1])} ${fmt(b[0])} ${fmt(b[1])}`
+  }
+  return d + 'Z'
+}
+
+function padPts(pts: Vec2[], pad: number): Vec2[] {
+  const out: Vec2[] = []
+  for (const p of pts) {
+    out.push([p[0] - pad, p[1] - pad], [p[0] + pad, p[1] + pad])
+  }
+  return out
+}
+
+/**
+ * 地面阴影：同中心的本影 + 半影，参数由 shadowUmbra / shadowPenumbra 控制。
+ */
 export function groundShadowMarkup(
-  footprint: string,
+  corners: Vec2[],
   pid: string,
   style: IsoShapeStyle,
-  size: number,
-  offset: Vec2
-): { defs: string; markup: string } {
-  const op = style.shadowOpacity ?? 0.3
-  const contactBlur = Math.max(1.2, Math.min(4, size * 0.022 + 1))
-  const castBlur = Math.max(5, Math.min(18, size * 0.07 + 6))
-  const cast = style.shadowCast ?? 1
-  let defs = shadowFilterDef(`${pid}-shc`, contactBlur)
-  let markup =
-    `<path d="${footprint}" fill="#000" opacity="${fmt(Math.min(0.5, op * 1.2))}" ` +
-    `filter="url(#${pid}-shc)"/>`
-  if (cast > 0.01) {
-    defs += shadowFilterDef(`${pid}-shd`, castBlur)
-    markup =
-      `<path d="${footprint}" fill="#000" opacity="${fmt(op * 0.5)}" ` +
-      `filter="url(#${pid}-shd)" transform="translate(${fmt(offset[0])} ${fmt(offset[1])})"/>` +
-      markup
+  _offset: Vec2
+): { defs: string; markup: string; pts: Vec2[] } {
+  const umbra = { ...DEFAULT_SHADOW_UMBRA, ...style.shadowUmbra }
+  const penumbra = { ...DEFAULT_SHADOW_PENUMBRA, ...style.shadowPenumbra }
+  const c = centroid(corners)
+  let minY = Infinity, maxY = -Infinity
+  for (const p of corners) {
+    minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1])
   }
-  return { defs, markup }
+  const h = maxY - minY || 1
+
+  const apply = (layer: Required<ShadowLayer>): Vec2[] => {
+    let pts = scaleAbout(corners, c, layer.scale)
+    if (layer.stretch > 0.001) {
+      pts = pts.map(p => [p[0], p[1] + h * layer.stretch * ((p[1] - minY) / h)])
+    }
+    if (layer.dx || layer.dy) {
+      pts = pts.map(p => [p[0] + layer.dx, p[1] + layer.dy])
+    }
+    return pts
+  }
+
+  const filterDef = (id: string, blur: number) =>
+    `<filter id="${id}" x="-90%" y="-90%" width="280%" height="280%">` +
+    `<feGaussianBlur stdDeviation="${fmt(Math.max(0, blur))}"/></filter>`
+
+  const blob = (pts: Vec2[], filterId: string, blur: number, opacity: number) => {
+    if (opacity < 0.01) return ''
+    const filt = blur > 0.05 ? ` filter="url(#${filterId})"` : ''
+    return `<path d="${roundedPolygonPath(pts, 0.4)}" fill="#000" opacity="${fmt(clamp(opacity, 0, 1))}"${filt}/>`
+  }
+
+  const umbraId = `${pid}-umbra`
+  const penumbraId = `${pid}-penumbra`
+  const umbraPts = apply(umbra)
+  const penumbraPts = apply(penumbra)
+  let defs = ''
+  if (penumbra.blur > 0.05 && penumbra.opacity >= 0.01) defs += filterDef(penumbraId, penumbra.blur)
+  if (umbra.blur > 0.05 && umbra.opacity >= 0.01) defs += filterDef(umbraId, umbra.blur)
+  const markup =
+    blob(penumbraPts, penumbraId, penumbra.blur, penumbra.opacity) +
+    blob(umbraPts, umbraId, umbra.blur, umbra.opacity)
+  return {
+    defs,
+    markup,
+    pts: padPts(penumbraPts, penumbra.blur * 3.5).concat(padPts(umbraPts, umbra.blur * 3.5))
+  }
 }
 
 export function isoStyleFromElement(el: HTMLElement): IsoShapeStyle {
@@ -670,11 +785,6 @@ export function glowFilterDef(id: string, color: string, blur: number): string {
     `<feComposite in="c" in2="b" operator="in" result="g"/>` +
     `<feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>` +
     `</filter>`
-}
-
-export function shadowFilterDef(id: string, blur: number): string {
-  return `<filter id="${id}" x="-40%" y="-40%" width="180%" height="180%">` +
-    `<feGaussianBlur stdDeviation="${fmt(blur)}"/></filter>`
 }
 
 export function aoGradientDef(

@@ -214,13 +214,16 @@ export function renderCylinder(raw: CylinderOptions = {}): IsoShapeResult {
   }
 
   let shadowMarkup = ''
+  let shadowPts: Vec2[] = []
   if (options.shadow) {
     const sh = groundShadowMarkup(
-      ellipsePath(0), pid, options, Math.min(rx, ry) * 2,
+      [0, 90, 180, 270].map(a => pr(arcPt(a), 0)),
+      pid, options,
       shadowOffset(P.project, D, options.shadowCast ?? 1)
     )
     defs += sh.defs
     shadowMarkup = sh.markup
+    shadowPts = sh.pts
   }
 
   const yTop = Math.min(Ltop[1], Rtop[1])
@@ -351,7 +354,10 @@ export function renderCylinder(raw: CylinderOptions = {}): IsoShapeResult {
   for (const z of [0, D]) {
     for (let deg = 0; deg < 360; deg += 6) samplesPts.push(pr(arcPt(deg), z))
   }
-  const viewBox = boundsOf(samplesPts, styleMargin(options, maxAnchorExtent(options.anchors)))
+  const viewBox = boundsOf(
+    samplesPts.concat(shadowPts),
+    styleMargin(options, maxAnchorExtent(options.anchors))
+  )
 
   const markup = `<defs>${defs}</defs>` + shadowMarkup + body + fx.markup + anchorMarkup
   return {

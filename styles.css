@@ -156,6 +156,12 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   border-right: 1px solid #2b2b4e;
   display: flex; flex-direction: column; gap: 10px;
   background: #121226;
+  max-height: 640px;
+  overflow-y: auto;
+}
+.ctl-sub {
+  font-size: 11px; color: #8a8ab8; letter-spacing: 0.04em;
+  margin: 6px 0 4px; padding-top: 6px; border-top: 1px solid #2b2b4e;
 }
 .shape-tabs, .pg-tabs { display: flex; gap: 4px; }
 .shape-tabs button, .pg-tabs button, .presets button {

@@ -248,13 +248,16 @@ export function renderRoundedBox(raw: RoundedBoxOptions = {}): RoundedBoxResult 
   }
 
   let shadowMarkup = ''
+  let shadowPts: Vec2[] = []
   if (options.shadow) {
     const sh = groundShadowMarkup(
-      roundRectPath(0), pid, options, Math.min(W, H),
+      [pr([0, 0], 0), pr([W, 0], 0), pr([W, H], 0), pr([0, H], 0)],
+      pid, options,
       shadowOffset(P.project, D, options.shadowCast ?? 1)
     )
     defs += sh.defs
     shadowMarkup = sh.markup
+    shadowPts = sh.pts
   }
 
   const yTop = Math.min(Ltop[1], Rtop[1])
@@ -345,7 +348,10 @@ export function renderRoundedBox(raw: RoundedBoxOptions = {}): RoundedBoxResult 
       samplePts.push(pr(arcPt(c, deg), z))
     }
   }
-  const viewBox = boundsOf(samplePts, styleMargin(options, maxAnchorExtent(options.anchors)))
+  const viewBox = boundsOf(
+    samplePts.concat(shadowPts),
+    styleMargin(options, maxAnchorExtent(options.anchors))
+  )
 
   const markup = `<defs>${defs}</defs>` + shadowMarkup + body + fx.markup + anchorMarkup
   return {

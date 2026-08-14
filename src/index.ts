@@ -24,7 +24,7 @@ export { renderIsoLink, isoLinkStyle, routeIsoWaypoints } from './core/IsoLink'
 export type { IsoLinkOptions } from './core/IsoLink'
 export { renderIsoPerson, renderIsoPlant } from './core/IsoProps'
 export type { IsoPersonOptions, IsoPlantOptions } from './core/IsoProps'
-export type { IsoShapeStyle, IsoShapeResult, FaceName, PositionName, Vec2, Vec3, MaterialName, ThemeName } from './core/isoSvg'
+export type { IsoShapeStyle, IsoShapeResult, FaceName, PositionName, Vec2, Vec3, MaterialName, ThemeName, ShadowLayer } from './core/isoSvg'
 export {
   boxFacePoint,
   cylinderAnchorPoint,
@@ -32,6 +32,8 @@ export {
   deriveFaceColors,
   MATERIALS,
   THEMES,
+  DEFAULT_SHADOW_UMBRA,
+  DEFAULT_SHADOW_PENUMBRA,
   parseColor,
   cssColor,
   isMaterialName,
